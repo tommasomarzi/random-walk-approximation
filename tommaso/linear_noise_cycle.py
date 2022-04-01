@@ -13,118 +13,152 @@ import os
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-K_1 = K_4 = 1.
-K_2 = K_3 = 2.
+K_1 = K_4 = 0.9
+K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_3 = v_2 = 2.
+#v_3 = v_2 = 0.4
 N_min = 15
 N_max = 105
 N_step = 10
-K_1_values = [1.0]
+v_2_values = [1.8, 3.0]
 peaks = ['A', 'C']
+stability = None
+
+#-------------------- Threshold --------------------#
+#---------------------------------------------------#
+
+def v2_threshold(k1,k2,v1,v2):
+    v2_high = v1*(1+k2)/(1 - 2*k1)
+    v2_low =  v1*(1+k2)/(1 + 2*k1)
+    if v2_high > v2_low:
+        return [v2_low, v2_high]
+    elif v2_high < v2_low:
+        return [v2_high, v2_low]
+
+
+#----------------- Transition rates ----------------#
+#---------------------------------------------------#   
+
+def pi_AA(xA,xB,xC, k1, k2, v1, v2):
+    AA = 0.
+    return AA
+
+def pi_AB(xA,xB,xC, k1, k2, v1, v2):
+    AB = k1*v2/(k2*k1 + k1*xB + k2*xC)
+    return AB
+
+def pi_AC(xA,xB,xC, k1, k2, v1, v2):
+    AC = 0. # k*(N - n_A - n_B)/N
+    return AC
+
+def pi_BA(xA,xB,xC, k1, k2, v1, v2):
+    BA = k2*v1/(k1*k2 + k1*xB + k2*xA)
+    return BA
+
+def pi_BB(xA,xB,xC, k1, k2, v1, v2):
+    BB = 0.
+    return BB
+
+def pi_BC(xA,xB,xC, k1, k2, v1, v2):
+    BC = k2*v1/(k2*k1 + k1*xB + k2*xC)
+    return BC
+
+def pi_CA(xA,xB,xC, k1, k2, v1, v2):
+    CA = 0.  # k*n_A/N
+    return CA
+
+def pi_CB(xA,xB,xC, k1, k2, v1, v2):
+    CB = k1*v2/(k1*k2 + k1*xB + k2*xA)
+    return CB
+
+def pi_CC(xA,xB,xC, k1, k2, v1, v2):
+    CC = 0.
+    return CC
+
+
+#------------------ Exact solution -----------------#
+#---------------------------------------------------#   
+
+def null_eigenvector_eq(k1,k2,v1,v2):
+    xB = 1/(1 + (k1*v2*2/(k2*v1)))
+    xA = xC = (1-xB)/2
+
+    return xA, xB, xC
+
+
+def null_eigenvector_neq(k1,k2,v1,v2):
+    xB = k2*v1/(v2 - v1)
+
+    B = - (v2 - v1*(1 + k2))/(v2 - v1)
+    #C = (v2*k1*k1*(1 + v1/(v2 - v1)))/(v2 - v1)
+    C = (v2*k1*k1*v2)/((v2 - v1)**2)
+
+    xA_1 = (-B + math.sqrt(B**2 - 4*C))/(2)
+    xA_2 = (-B - math.sqrt(B**2 - 4*C))/(2)
+
+    if (xA_1 < 0) or (xA_1 > 1):
+        print("A problem occured, xA_1: {}".format(xA_1))
+
+    if (xA_2 < 0) or (xA_2 > 1):
+        print("A problem occured, xA_2: {}".format(xA_2))
+    
+    xC_1 = 1 - xA_1 - xB
+    xC_2 = 1 - xA_2 - xB
+    
+    return xA_1, xB, xC_1, xA_2, xC_2
 
 
 #---------------------- Cycles  --------------------#
 #---------------------------------------------------#
-for K_1 in K_1_values:
+for v_2 in v_2_values:
+    
+    v_3 = v_2
+
+    print("\nStarting simulation with v_1 = {}, v_2 = {}, K_1 = {}, K_2 = {}".format(v_1,v_2,K_1,K_2))     
+    
+    th = v2_threshold(K_1,K_2,v_1,v_2)
+
+    print("The threshold is: (low = {}, high = {})".format(th[0],th[1]))
+    
     for N in np.arange(N_min, N_max + 1, N_step):
+
         Z_list = []
+
+        print("\nStarting simulation with N = {}".format(N))
 
         for peak in peaks:
             K_4 = K_1
-
-            print("\nStarting simulation with K_1 = {}, K_2 = {} and N = {}".format(K_1,K_2,N))
-            n_A, n_B = N/3., N/3.
-            n_C = N - n_A - n_B
-            x_A = n_A/N
-            x_B = n_B/N
-            x_C = n_C/N
-
-
-            #----------------- Transition rates ----------------#
-            #---------------------------------------------------#   
-
-            def pi_AA(xA,xB,xC):
-                AA = 0.
-                return AA
-
-            def pi_AB(xA,xB,xC):
-                AB = K_4*v_2/(K_2*K_4 + N*K_4*xB + N*K_2*xC)
-                return AB
-
-            def pi_AC(xA,xB,xC):
-                AC = 0. # k*(N - n_A - n_B)/N
-                return AC
-
-            def pi_BA(xA,xB,xC):
-                BA = K_3*v_1/(K_1*K_3 + N*K_1*xB + N*K_3*xA)
-                return BA
-
-            def pi_BB(xA,xB,xC):
-                BB = 0.
-                return BB
-
-            def pi_BC(xA,xB,xC):
-                BC = K_2*v_4/(K_2*K_4 + N*K_4*xB + N*K_2*xC)
-                return BC
-
-            def pi_CA(xA,xB,xC):
-                CA = 0.  # k*n_A/N
-                return CA
-
-            def pi_CB(xA,xB,xC):
-                CB = K_1*v_3/(K_1*K_3 + N*K_1*xB + N*K_3*xA)
-                return CB
-
-            def pi_CC(xA,xB,xC):
-                CC = 0.
-                return CC
-
 
             #--------------- Numerical solution ----------------#
             #---------------------------------------------------#   
             def null_eigenvector_ns(vector):
                 x,y,z = vector
-                return [K_3*v_1*x/(K_1*K_3/N + K_1*y + K_3*x) - K_4*v_2*y/(K_2*K_4/N + K_4*y + K_2*z),
-                        K_2*v_4*z/(K_2*K_4/N + K_4*y + K_2*z) - K_1*v_3*y/(K_1*K_3/N + K_1*y + K_3*x),
+                return [K_3*v_1*x/(K_1*K_3 + K_1*y + K_3*x) - K_4*v_2*y/(K_2*K_4 + K_4*y + K_2*z),
+                        K_2*v_4*z/(K_2*K_4 + K_4*y + K_2*z) - K_1*v_3*y/(K_1*K_3 + K_1*y + K_3*x),
                         x + y + z - 1]
 
-            crit_ns = fsolve(null_eigenvector_ns, [1, 0, 0])
+            if ((v_2 <= th[0]) or (v_2 >= th[1])):
+                if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):
+                    xA1_star, xB_star, xC1_star, xA2_star, xC2_star = null_eigenvector_neq(K_1,K_2,v_1,v_2)
+                    stability = 'bistable'
+                    if peak == 'A':
+                        crit_ns = fsolve(null_eigenvector_ns, [1.,0.,0.])
+                        xA_star = xA1_star
+                        xC_star = xC1_star
+                    elif peak == 'C':
+                        crit_ns = fsolve(null_eigenvector_ns, [0.,0.,1.])
+                        xA_star = xA2_star
+                        xC_star = xC2_star
+            else:
+                stability = 'monostable'
+                crit_ns = fsolve(null_eigenvector_ns, [0.,1.,0.])
+                xA_star, xB_star, xC_star = null_eigenvector_eq(K_1,K_2,v_1,v_2)
 
+            assert(np.isclose((xA_star + xB_star + xC_star),1.))
 
-            #------------------ Exact solution -----------------#
-            #---------------------------------------------------#   
+            print("\nAnalytical critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(xA_star,xB_star,xC_star))
+            print("\nNumerical critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(crit_ns[0],crit_ns[1],crit_ns[2]))
 
-            def null_eigenvector_eq():
-                xB = 1/(1 + (K_1*v_2*2/(K_2*v_1)))
-                xA = xC = (1-xB)/2
-                return xA, xB, xC
-
-
-            def null_eigenvector_neq():
-                xB = K_2*v_1/(v_2 - v_1)
-
-                B = - (v_2*(K_1 + N - K_1**2) - v_1*(N + K_2))/(v_2 - v_1)
-                C = (v_2*K_1*K_1*(1 + v_1/(v_2 - v_1)))/(v_2 - v_1)
-                xA = (-B + math.sqrt(B**2 - 4*C))/(2*N)
-
-                if (xA < 0) or (xA > 1):
-                    xA = (-B - math.sqrt(B**2 - 4*C))/(2*N)
-
-                xB = xB/N
-
-                xC = 1 - xA - xB
-
-                if peak == 'A':
-                    return xA, xB, xC
-                elif peak == 'C':
-                    return xC, xB, xA
-                else:
-                    raise ValueError('Chosen peak not supported')
-
-            xA_star, xB_star, xC_star = null_eigenvector_neq()
-
-            print("\nThe critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(xA_star,xB_star,xC_star))
             if np.allclose(crit_ns, [xA_star, xB_star, xC_star]):
                 print("\nThe analytic solution is close to the numerical one.")
 
@@ -132,24 +166,24 @@ for K_1 in K_1_values:
             #---------------- Derivatives of L -----------------#
             #---------------------------------------------------#
 
-            den_A = (K_1*K_2 + N*K_1*xB_star + N*K_2*xA_star)
-            den_C = (K_1*K_2 + N*K_1*xB_star + N*K_2*xC_star)
+            den_A = (K_1*K_2 + K_1*xB_star + K_2*xA_star)
+            den_C = (K_1*K_2 + K_1*xB_star + K_2*xC_star)
 
-            pi_BA_der_A = -(N*(K_2**2)*v_1)/(den_A**2)
-            pi_BA_der_B = -(N*K_1*K_2*v_1)/(den_A**2)
+            pi_BA_der_A = -((K_2**2)*v_1)/(den_A**2)
+            pi_BA_der_B = -(K_1*K_2*v_1)/(den_A**2)
             pi_BA_der_C = 0.
 
             pi_AB_der_A = 0.
-            pi_AB_der_B = -(N*(K_1**2)*v_2)/(den_C**2)
-            pi_AB_der_C = -(N*K_1*K_2*v_2)/(den_C**2)
+            pi_AB_der_B = -((K_1**2)*v_2)/(den_C**2)
+            pi_AB_der_C = -(K_1*K_2*v_2)/(den_C**2)
 
-            pi_CB_der_A = -(N*K_1*K_2*v_2)/(den_A**2)
-            pi_CB_der_B = -(N*(K_1**2)*v_2)/(den_A**2)
+            pi_CB_der_A = -(K_1*K_2*v_2)/(den_A**2)
+            pi_CB_der_B = -((K_1**2)*v_2)/(den_A**2)
             pi_CB_der_C = 0.
 
             pi_BC_der_A = 0.
-            pi_BC_der_B = -(N*K_1*K_2*v_1)/(den_C**2)
-            pi_BC_der_C = -(N*(K_2**2)*v_1)/(den_C**2)
+            pi_BC_der_B = -(K_1*K_2*v_1)/(den_C**2)
+            pi_BC_der_C = -((K_2**2)*v_1)/(den_C**2)
 
             pi_AC_der_A = pi_AC_der_B = pi_AC_der_C = 0.
 
@@ -171,12 +205,12 @@ for K_1 in K_1_values:
             L_BC_bar = -pi_BA_der_C*xA_star + (pi_AB_der_C + pi_CB_der_C)*xB_star - pi_BC_der_C*xC_star
             L_CC_bar = -pi_CA_der_C*xA_star - pi_CB_der_C*xB_star + (pi_AC_der_C + pi_BC_der_C)*xC_star 
 
-            pi_BA_star = pi_BA(xA_star, xB_star, xC_star)
-            pi_CA_star = pi_CA(xA_star, xB_star, xC_star)
-            pi_AB_star = pi_AB(xA_star, xB_star, xC_star)
-            pi_CB_star = pi_CB(xA_star, xB_star, xC_star)
-            pi_AC_star = pi_AC(xA_star, xB_star, xC_star)
-            pi_BC_star = pi_BC(xA_star, xB_star, xC_star)
+            pi_BA_star = pi_BA(xA_star, xB_star, xC_star, K_1, K_2, v_1, v_2)
+            pi_CA_star = pi_CA(xA_star, xB_star, xC_star, K_1, K_2, v_1, v_2)
+            pi_AB_star = pi_AB(xA_star, xB_star, xC_star, K_1, K_2, v_1, v_2)
+            pi_CB_star = pi_CB(xA_star, xB_star, xC_star, K_1, K_2, v_1, v_2)
+            pi_AC_star = pi_AC(xA_star, xB_star, xC_star, K_1, K_2, v_1, v_2)
+            pi_BC_star = pi_BC(xA_star, xB_star, xC_star, K_1, K_2, v_1, v_2)
 
 
             #------------------- Drift matrix ------------------#
@@ -225,7 +259,7 @@ for K_1 in K_1_values:
             #------------------ Second moment ------------------#
             #---------------------------------------------------#   
 
-            precision = 1e-15        #add offset to avoid negative (close to zero) eigenvalues
+            precision = 1e-14        #add offset to avoid negative (close to zero) eigenvalues
 
             sigma = linalg.solve_continuous_lyapunov(A + precision*np.eye(*A.shape), D + precision*np.eye(*D.shape))  
 
@@ -234,7 +268,6 @@ for K_1 in K_1_values:
 
             if np.all(LA.eigvals(sigma)>=0):
                 print("\nThe covariance matrix is positive semidefinite.")
-
 
             #----------------- Gaussian solution ---------------#
             #---------------------------------------------------#   
@@ -247,6 +280,9 @@ for K_1 in K_1_values:
                     Z[i,j] =  multivariate_normal.pdf([i/N,1-i/N-j/N,j/N], mean=[xA_star,xB_star,xC_star], cov=sigma)
             
             Z_list.append(Z)
+
+            if stability == 'monostable':
+                break
         
         Z = np.abs(np.array(Z_list)).sum(axis=0)
 
@@ -256,7 +292,7 @@ for K_1 in K_1_values:
         #--------------- Save pic and file -----------------#
         #---------------------------------------------------#   
         namefile = str(N)
-        if v_2 > v_1:
+        if stability == "bistable":
             namefile = 'results/LNA_results/bistable/' + namefile
             namefile += '_bistable_LNA'
         else:
@@ -289,7 +325,7 @@ for K_1 in K_1_values:
         fig = plt.figure(figsize=(8,6))
         plt.imshow(Z_norm,origin='lower',interpolation='nearest')
         plt.colorbar()
-        if v_2 > v_1:
+        if stability == "bistable":
             plt.title(u"Bistable with $K_1 = {}$ , $K_2 = {}$, $v_1 = {}$, $v_2 = {}$ and $N = {}$".format(K_1, K_2, v_1, v_2, N))
         else:
             plt.title(u"Monostable with $K_1 = {}$ , $K_2 = {}$, $v_1 = {}$, $v_2 = {}$ and $N = {}$".format(K_1, K_2, v_1, v_2, N))
