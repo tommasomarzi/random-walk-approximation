@@ -9,12 +9,14 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.cm as cm
 import itertools
 import scipy
+import sympy
 
 #%%
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-N = 15
+
+N = 3
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
@@ -39,7 +41,7 @@ def pi_AA(xA,xB,xC, k1, k2, v1, v2):
     return AA
 
 def pi_AB(xA,xB,xC, k1, k2, v1, v2):
-    AB = k1*v2/(k2*k1 + k1*xB + k2*xC)
+    AB = xB*k1*v2/(k2*k1 + k1*xB + k2*xC)
     return AB
 
 def pi_AC(xA,xB,xC, k1, k2, v1, v2):
@@ -47,7 +49,7 @@ def pi_AC(xA,xB,xC, k1, k2, v1, v2):
     return AC
 
 def pi_BA(xA,xB,xC, k1, k2, v1, v2):
-    BA = k2*v1/(k1*k2 + k1*xB + k2*xA)
+    BA = xA*k2*v1/(k1*k2 + k1*xB + k2*xA)
     return BA
 
 def pi_BB(xA,xB,xC, k1, k2, v1, v2):
@@ -55,7 +57,7 @@ def pi_BB(xA,xB,xC, k1, k2, v1, v2):
     return BB
 
 def pi_BC(xA,xB,xC, k1, k2, v1, v2):
-    BC = k2*v1/(k2*k1 + k1*xB + k2*xC)
+    BC = xC*k2*v1/(k2*k1 + k1*xB + k2*xC)
     return BC
 
 def pi_CA(xA,xB,xC, k1, k2, v1, v2):
@@ -63,7 +65,7 @@ def pi_CA(xA,xB,xC, k1, k2, v1, v2):
     return CA
 
 def pi_CB(xA,xB,xC, k1, k2, v1, v2):
-    CB = k1*v2/(k1*k2 + k1*xB + k2*xA)
+    CB = xB*k1*v2/(k1*k2 + k1*xB + k2*xA)
     return CB
 
 def pi_CC(xA,xB,xC, k1, k2, v1, v2):
@@ -74,44 +76,52 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
 #----------------- Rates decision ------------------#
 #---------------------------------------------------#
 
-def return_rate(i,j,k,l,m,n):
-    assert((j+l+n) == N)
+def return_rate(i,j,k,l):
 
     a1 = i-j
-    a2 = k-l
-    a3 = m-n
+    a3 = k-l
+    a2 = -(a1+a3)
 
     assert((a1+a2+a3) == 0)
 
+    BA = pi_BA(j/N, 1-(j/N + l/N), l/N, k1, k2, v1, v2)
+    CA = pi_CA(j/N, 1-(j/N + l/N), l/N, k1, k2, v1, v2)
+    AB = pi_AB(j/N, 1-(j/N + l/N), l/N, k1, k2, v1, v2)
+    CB = pi_CB(j/N, 1-(j/N + l/N), l/N, k1, k2, v1, v2)
+    AC = pi_AC(j/N, 1-(j/N + l/N), l/N, k1, k2, v1, v2)
+    BC = pi_BC(j/N, 1-(j/N + l/N), l/N, k1, k2, v1, v2)
+    g = 0.
     if a1 == 0:
         if ((a2 == 1) and (a3 == -1)):
-            g = pi_BC(j/N, l/N, n/N, k1, k2, v1, v2)
+            g = BC
         elif ((a2 == -1) and (a3 == 1)):
-            g = pi_CB(j/N, l/N, n/N, k1, k2, v1, v2)
+            g = CB
         elif ((a2 == 0) and (a3 == 0)):
-            AB = pi_AB(j/N, l/N, n/N, k1, k2, v1, v2)
-            BA = pi_BA(j/N, l/N, n/N, k1, k2, v1, v2)
-            AC = pi_AC(j/N, l/N, n/N, k1, k2, v1, v2)
-            CA = pi_CA(j/N, l/N, n/N, k1, k2, v1, v2)
-            BC = pi_BC(j/N, l/N, n/N, k1, k2, v1, v2)
-            CB = pi_CB(j/N, l/N, n/N, k1, k2, v1, v2)
-            g = - (AB+BA+AC+CA+BC+CB)
+            if j != 0:
+                g -= BA 
+                g -= CA
+            if l != 0:
+                g -= AC
+                g -= BC
+            if (N-j-l) != 0:
+                g -= AB
+                g -= CB
         else:
-            raise ValueError('Encountered impossible combination of alphas (1).')
+            g = 0.
     elif a1 == 1:
         if ((a2 == -1) and (a3 == 0)):
-            g = pi_AB(j/N, l/N, n/N, k1, k2, v1, v2)
+            g = AB
         elif ((a2 == 0) and (a3 == -1)):
-            g = pi_AC(j/N, l/N, n/N, k1, k2, v1, v2)
+            g = AC
         else:
-            raise ValueError('Encountered impossible combination of alphas (2).')
+            g = 0.
     elif a1 == -1:
         if ((a2 == 1) and (a3 == 0)):
-            g = pi_BA(j/N, l/N, n/N, k1, k2, v1, v2)
+            g = BA
         elif ((a2 == 0) and (a3 == 1)):
-            g = pi_CA(j/N, l/N, n/N, k1, k2, v1, v2)
+            g = CA
         else:
-            raise ValueError('Encountered impossible combination of alphas (3).')
+            g = 0.
 
     return g    
 
@@ -120,125 +130,121 @@ def return_rate(i,j,k,l,m,n):
 #----------------- Define G matrix -----------------#
 #---------------------------------------------------#
 
-G = np.zeros((((N+1)**3),((N+1)**3)))
+G = np.zeros((((N+1)**2),((N+1)**2)))
 
-dim_1 = list(np.arange((N+1)**3))
+dim_1 = list(np.arange((N+1)**2))
 
 cnt_1_x = 0
 cnt_2_x = 0
-cnt_3_x = 0
 
+do_occupation = True
 occupation_filled = False
+disallowed = True
 
 for i in dim_1:
     cnt_1_y = 0
     cnt_2_y = 0
-    cnt_3_y = 0
 
-    occupation = np.zeros(((N+1)**3))
+    occupation = np.zeros(((N+1)**2))
 
     for j in dim_1:
         
         alpha_1 = cnt_1_x - cnt_1_y
         alpha_2 = cnt_2_x - cnt_2_y
-        alpha_3 = cnt_3_x - cnt_3_y
+        alpha_3 = - (alpha_1 + alpha_2)
         
-        if ((cnt_1_y + cnt_2_y + cnt_3_y) != N):
-            cnt_3_y += 1
-            if (cnt_3_y == (N+1)):
-                cnt_3_y = 0
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-            continue 
-
-        occupation[j] = 1.
-
-        if ((alpha_3 < -1) or (alpha_3 > 1)):
-            cnt_3_y += 1
-            if (cnt_3_y == (N+1)):
-                cnt_3_y = 0
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-            continue
-        
-        if ((alpha_2 < -1) or (alpha_2 > 1)):
-            cnt_3_y += 1
-            if (cnt_3_y == (N+1)):
-                cnt_3_y = 0
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-            continue
-        
-        if ((alpha_1 < -1) or (alpha_1 > 1)):
-            cnt_3_y += 1
-            if (cnt_3_y == (N+1)):
-                cnt_3_y = 0
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-            continue
-
-        if ((alpha_1 + alpha_2 + alpha_3) != 0):
-            cnt_3_y += 1
-            if (cnt_3_y == (N+1)):
-                cnt_3_y = 0
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-            continue
-
-        G[i,j] = return_rate(cnt_1_x, cnt_1_y, cnt_2_x, cnt_2_y, cnt_3_x, cnt_3_y)
-
-        cnt_3_y += 1
-        if (cnt_3_y == (N+1)):
-            cnt_3_y = 0
+        if ((cnt_1_y + cnt_2_y) > N):
             cnt_2_y += 1
             if (cnt_2_y == (N+1)):
                 cnt_2_y = 0
                 cnt_1_y += 1
+            continue 
 
-    #NEW METHOD
-    if not occupation_filled:
-        if np.all(G[i] == 0):
-            G[i] = occupation
-            occupation_filled = True
-            idx = i.copy()
-            occ = occupation.copy()
+        occupation[j] = 1.
+
+        if ((alpha_2 < -1) or (alpha_2 > 1)):
+            cnt_2_y += 1
+            if (cnt_2_y == (N+1)):
+                cnt_2_y = 0
+                cnt_1_y += 1
+            continue
+        
+        if ((alpha_1 < -1) or (alpha_1 > 1)):
+            cnt_2_y += 1
+            if (cnt_2_y == (N+1)):
+                cnt_2_y = 0
+                cnt_1_y += 1
+            continue
+
+        G[i,j] = return_rate(cnt_1_x, cnt_1_y, cnt_2_x, cnt_2_y)
+
+        cnt_2_y += 1
+        if (cnt_2_y == (N+1)):
+            cnt_2_y = 0
+            cnt_1_y += 1
     
-    cnt_3_x += 1
-    if (cnt_3_x == (N+1)):
-        cnt_3_x = 0
-        cnt_2_x += 1
-        if (cnt_2_x == (N+1)):
-            cnt_2_x = 0
-            cnt_1_x += 1
-            
+    if do_occupation:
+        if not occupation_filled:
+            if np.all(G[i] == 0):
+                occupation_filled = True
+                idx = i.copy()
+                occ = occupation.copy()
+    
+    cnt_2_x += 1
+    if (cnt_2_x == (N+1)):
+        cnt_2_x = 0
+        cnt_1_x += 1
+
 #%%
-#--------------- Constraint addition ---------------#
+#------------ Mass-balance constraint --------------#
 #---------------------------------------------------#
 
-b = np.zeros(((N+1)**3))
+idx_list = np.where(occ == 0)[0]
 
-# OLD METHOD
-#idx = np.where(~G.any(axis=1))[0][0]
-#G[idx] = 1.
+G_del = np.delete(G, idx_list, axis = 0)
+G_del = np.delete(G_del, idx_list, axis = 1)
 
-b[idx] = 1
+assert(np.allclose(np.sum(G_del, axis = 0), np.zeros(G_del.shape[0])))
 
+#%%
+#--------------- Gaussian elimination --------------#
+#---------------------------------------------------#
+b = np.zeros(G_del.shape[0])
+n = len(b)
+x = np.zeros(n, float)
+
+for k in range(n-1):
+    if np.abs(G_del[k,k]) < 1.0e-12:
+        for i in range(k+1, n):
+            if np.abs(G_del[i,k]) > np.abs(G_del[k,k]):
+                G_del[[k,i]] = G_del[[i,k]]
+                b[[k,i]] = b[[i,k]]
+                break
+
+    for i in range(k+1,n):
+        if G_del[i,k] == 0:continue
+
+        factor_1 = G_del[i,k].copy() #G_del[k,k]/G_del[i,k]
+        factor_2 = G_del[k,k].copy()
+
+        for j in range(k,n):
+            G_del[i,j] = G_del[k,j]*factor_1 - G_del[i,j]*factor_2
+        
+        b[i] = b[k]*factor_1 - b[i]*factor_2
+
+#%%
+#------------ Normalization constraint -------------#
+#---------------------------------------------------#
+
+empty_idx = np.where(~G_del.any(axis=1))[0][0]
+G_del[empty_idx] = 1.0
+b[empty_idx] = 1.0
 
 #%%
 #-------------------- Solution ---------------------#
 #---------------------------------------------------#
 
-P = scipy.linalg.lstsq(G,b)
+P = scipy.linalg.lstsq(G_del,b)
 solution = P[0]
 solution = solution.reshape((N+1,N+1,N+1))
 
