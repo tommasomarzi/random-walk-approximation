@@ -72,6 +72,7 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
     CC = 0.
     return CC
 
+
 #%%
 #----------------- Rates decision ------------------#
 #---------------------------------------------------#
@@ -213,6 +214,8 @@ b = np.zeros(G_del.shape[0])
 n = len(b)
 x = np.zeros(n, float)
 
+offset = 1e-15
+
 for k in range(n-1):
     if np.abs(G_del[k,k]) < 1.0e-12:
         for i in range(k+1, n):
@@ -224,11 +227,15 @@ for k in range(n-1):
     for i in range(k+1,n):
         if G_del[i,k] == 0:continue
 
-        factor_1 = G_del[i,k].copy() #G_del[k,k]/G_del[i,k]
+        #factor = G_del[k,k]/G_del[i,k]
+        factor_1 = G_del[i,k].copy() 
         factor_2 = G_del[k,k].copy()
 
         for j in range(k,n):
             G_del[i,j] = G_del[k,j]*factor_1 - G_del[i,j]*factor_2
+            #G_del[i,j] = G_del[k,j] - G_del[i,j]*factor
+        
+        G_del[i, np.abs(G_del[i,:]) < offset] = 0
         
         b[i] = b[k]*factor_1 - b[i]*factor_2
 
@@ -239,6 +246,32 @@ for k in range(n-1):
 empty_idx = np.where(~G_del.any(axis=1))[0][0]
 G_del[empty_idx] = 1.0
 b[empty_idx] = 1.0
+
+
+
+#%%
+#----------------- Find solution -------------------#
+#---------------------------------------------------#
+
+P = scipy.linalg.solve(G_del,b)
+
+solution = occ.copy()
+solution[occ == 1] = P
+solution = solution.reshape((N+1,N+1))
+
+
+#%%
+#------------------ Plot solution ------------------#
+#---------------------------------------------------#
+
+fig = plt.figure(figsize=(8,6))
+plt.imshow(solution.T,origin='lower',interpolation='nearest')
+plt.colorbar()
+plt.title(u"Solution with $K_1 = {}$ , $K_2 = {}$, $v_1 = {}$, $v_2 = {}$ and $N = {}$".format(K_1, K_2, v_1, v_2, N))
+plt.xlabel("$n_A$",size=14)
+plt.ylabel("$n_C$",size=14)
+plt.tight_layout()
+plt.show()
 
 #%%
 #-------------------- Solution ---------------------#
