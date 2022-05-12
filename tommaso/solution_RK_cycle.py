@@ -1,16 +1,22 @@
+# %%
 
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import RK45
 from tqdm import tqdm
+import os
+os.chdir("/home/PERSONALE/stefano.polizzi/spolizzi/laplacian graph theory")
+path = %pwd
 
+# %%
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_2_range = [1.8, 2.5, 3.0]
-
-N_range = np.arange(0,106,5)
+v_2_range = np.linspace(1.5,3.52,102)
+N_min = 5
+N_max = 505
+N_range = np.arange(N_min, N_max+1, N_step)
 
 t_max = 3000
 
@@ -56,13 +62,10 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
 
 
 def return_rate(i,j,k,l,N):
-
     a1 = i-j
     a3 = k-l
     a2 = -(a1+a3)
-
     assert((a1+a2+a3) == 0)
-
     BA = pi_BA(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
     CA = pi_CA(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
     AB = pi_AB(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
@@ -77,7 +80,7 @@ def return_rate(i,j,k,l,N):
             g = CB
         elif ((a2 == 0) and (a3 == 0)):
             if j != 0:
-                g -= BA 
+                g -= BA
                 g -= CA
             if l != 0:
                 g -= AC
@@ -101,8 +104,7 @@ def return_rate(i,j,k,l,N):
             g = CA
         else:
             g = 0.
-
-    return g    
+    return g
 
 
 def build_G(N):
@@ -134,7 +136,7 @@ def build_G(N):
                 if (cnt_2_y == (N+1)):
                     cnt_2_y = 0
                     cnt_1_y += 1
-                continue 
+                continue
 
             occupation[j] = 1.
 
@@ -144,7 +146,7 @@ def build_G(N):
                     cnt_2_y = 0
                     cnt_1_y += 1
                 continue
-            
+
             if ((alpha_1 < -1) or (alpha_1 > 1)):
                 cnt_2_y += 1
                 if (cnt_2_y == (N+1)):
@@ -172,15 +174,14 @@ def build_G(N):
             cnt_1_x += 1
     return G, occ
 
-        
+
 def P_dot(t,P):
     return np.matmul(G, P)
-            
+
 
 def error(p_curr, p_prev):
     return np.sqrt(np.sum((p_curr-p_prev)**2))
-
-
+# %%
 for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
@@ -205,14 +206,17 @@ for v_2 in v_2_range:
             if i > error_shift:
                 if (np.abs(error_values[i] - error_values[i-error_shift]) < error_offset):
                     break
-            
+
             if res.status == 'finished':
                 break
-            
-        solution = P_values[50]/(np.sum(P_values[50]))
+
+        solution = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
-
-
+        folder = os.path.join(path,"RKI_results")
+        namefile = os.path.join(folder,"monostable", \
+                    "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
+                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
+        np.savetxt(namefile, solution)
         fig = plt.figure(figsize=(8,6))
         plt.imshow(solution,origin='lower',interpolation='nearest')
         plt.colorbar()
@@ -221,4 +225,4 @@ for v_2 in v_2_range:
         plt.ylabel("$n_C$",size=14)
         plt.tight_layout()
         plt.show()
-
+#plt.plot(error_values)
