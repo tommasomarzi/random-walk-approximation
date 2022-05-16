@@ -187,7 +187,14 @@ for v_2 in v_2_range:
         v_3 = v_2
 
         G, occupation_vector = build_G(N)
-        P_0 = occupation_vector/occupation_vector.sum()
+        idx_list = np.where(occupation_vector == 0)[0]
+
+        G = np.delete(G, idx_list, axis = 0)
+        G = np.delete(G, idx_list, axis = 1)
+
+        n_allowed_states = len(occupation_vector) - len(idx_list)
+        P_0 = np.ones(n_allowed_states)
+        P_0 = P_0/np.sum(P_0)
 
         res = RK45(P_dot, t0 = 0, y0 = P_0, t_bound = t_max)
 
@@ -210,8 +217,10 @@ for v_2 in v_2_range:
             if res.status == 'finished':
                 break
 
-        solution = P_values[-1]/(np.sum(P_values[-1]))
+        solution = occupation_vector.copy()
+        solution[occupation_vector == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
+        
         folder = os.path.join(path,"RKI_results")
         namefile = os.path.join(folder,"monostable", \
                     "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
