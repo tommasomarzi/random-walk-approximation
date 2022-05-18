@@ -3,17 +3,19 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import RK45
+from tqdm import tqdm
+import itertools
 
 #%%
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-N = 35
+N = 100
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_3 = v_2 = 3.0
+v_3 = v_2 = 1.5
 
 k1 = K_1
 k2 = K_2 
@@ -24,6 +26,10 @@ v2 = v_2
 v3 = v_3 
 v4 = v_4 
 
+t_max = 3000
+
+error_shift = 50            #delay
+error_offset = 1e-06        #difference
 
 #%%
 #----------------- Transition rates ----------------#
@@ -64,7 +70,6 @@ def pi_CB(xA,xB,xC, k1, k2, v1, v2):
 def pi_CC(xA,xB,xC, k1, k2, v1, v2):
     CC = 0.
     return CC
-
 
 #%%
 #----------------- Rates decision ------------------#
@@ -119,6 +124,57 @@ def return_rate(i,j,k,l):
 
     return g    
 
+#%%
+#------------------- Custom sum --------------------#
+#---------------------------------------------------#
+
+def custom_sum(i, N):
+    if i == 0:
+        res = 0
+    else:
+        res = np.sum([(N + 1 - idx) for idx in np.arange(i)])
+    return res
+
+        
+#%%
+#--------------- Define occupation -----------------#
+#---------------------------------------------------#
+
+def build_occ(N):    
+    dim = list(np.arange((N+1)))
+    occupation = np.zeros(((N+1)**2))
+    occ_states = []
+
+    for i,j in itertools.product(dim, dim):
+        if (i+j <= N):
+            occupation[i*(N+1)+j] = 1.
+            occ_states.append((i,j))
+
+    return occupation, occ_states
+
+
+#%%
+#--------------- Define G filtered -----------------#
+#---------------------------------------------------#
+
+def build_G_filtered(occupation_states):
+    filtered_dim = len(occupation_states)
+
+    G = np.zeros((filtered_dim,filtered_dim))
+
+    for i,j in itertools.product(occupation_states, occupation_states):
+        alpha_1 = i[0] - j[0]
+        alpha_2 = i[1] - j[1]
+        
+        if ((alpha_2 < -1) or (alpha_2 > 1)):
+            continue
+        if ((alpha_1 < -1) or (alpha_1 > 1)):
+            continue
+    
+        G[custom_sum(i[0], N)+i[1],custom_sum(j[0], N)+j[1]] = return_rate(i[0], j[0], i[1], j[1])
+
+    return G
+
 
 #%%
 #----------------- Define G matrix -----------------#
@@ -136,7 +192,7 @@ def build_G():
     occupation_filled = False
     disallowed = True
 
-    for i in dim_1:
+    for i in tqdm(dim_1):
         cnt_1_y = 0
         cnt_2_y = 0
 
@@ -200,27 +256,50 @@ def P_dot(t,P):
     return np.matmul(G, P)
 
 
+#%%
+#------------------ Define error -------------------#
+#---------------------------------------------------#
+
+def error(p_curr, p_prev):
+    return np.sqrt(np.sum((p_curr-p_prev)**2))
+
+
 # %%
 #----------------- Initialization ------------------#
 #---------------------------------------------------#
 
-G, occupation_vector = build_G()
-P_0 = occupation_vector/occupation_vector.sum()
+vec, states = build_occ(N)    
+G = build_G_filtered(states)
 
+P_0 = np.ones(len(states))
+P_0 = P_0/np.sum(P_0)
+
+#G_old, occupation_vector = build_G()
+#idx_list = np.where(occupation_vector == 0)[0]
+#G_old = np.delete(G_old, idx_list, axis = 0)
+#G_old = np.delete(G_old, idx_list, axis = 1)
+#print(np.allclose(G, G_old))
 
 # %%
 #------------------ RUNGE-KUTTA --------------------#
 #---------------------------------------------------#
 
-res = RK45(P_dot, t0 = 0, y0 = P_0, t_bound = 1000)
+res = RK45(P_dot, t0 = 0, y0 = P_0, t_bound = t_max)
 
 t_values = []
 P_values = []
-for i in range(100):
+error_values = []
+P_values.append(P_0)
+
+for i in tqdm(range(t_max)):
     res.step()
     t_values.append(res.t)
     P_values.append(res.y)
+    error_values.append(error(P_values[i],P_values[i-1]))
 
+    if i > error_shift:
+        if (np.abs(error_values[i] - error_values[i-error_shift]) < error_offset):
+            break
     if res.status == 'finished':
         break
 
@@ -229,7 +308,8 @@ for i in range(100):
 #------------------ Get solution -------------------#
 #---------------------------------------------------#
 
-solution = P_values[-1]/(np.sum(P_values[-1]))
+solution = vec.copy()
+solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
 solution = solution.reshape((N+1,N+1))
 
 
@@ -238,10 +318,13 @@ solution = solution.reshape((N+1,N+1))
 #---------------------------------------------------#
 
 fig = plt.figure(figsize=(8,6))
-plt.imshow(solution.T,origin='lower',interpolation='nearest')
+plt.imshow(solution,origin='lower',interpolation='nearest')
 plt.colorbar()
 plt.title(u"Solution with $K_1 = {}$ , $K_2 = {}$, $v_1 = {}$, $v_2 = {}$ and $N = {}$".format(K_1, K_2, v_1, v_2, N))
 plt.xlabel("$n_A$",size=14)
 plt.ylabel("$n_C$",size=14)
 plt.tight_layout()
 plt.show()
+
+# %%
+plt.plot(error_values)

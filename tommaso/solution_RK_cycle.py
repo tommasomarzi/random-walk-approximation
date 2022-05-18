@@ -1,22 +1,17 @@
-# %%
-
+#%%
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import RK45
 from tqdm import tqdm
-import os
-os.chdir("/home/PERSONALE/stefano.polizzi/spolizzi/laplacian graph theory")
-path = %pwd
+import itertools
 
-# %%
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_2_range = np.linspace(1.5,3.52,102)
-N_min = 5
-N_max = 505
-N_range = np.arange(N_min, N_max+1, N_step)
+v_2_range = [2.49]
+
+N_range = np.arange(15,16,5)
 
 t_max = 3000
 
@@ -62,10 +57,13 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
 
 
 def return_rate(i,j,k,l,N):
+
     a1 = i-j
     a3 = k-l
     a2 = -(a1+a3)
+
     assert((a1+a2+a3) == 0)
+
     BA = pi_BA(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
     CA = pi_CA(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
     AB = pi_AB(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
@@ -80,7 +78,7 @@ def return_rate(i,j,k,l,N):
             g = CB
         elif ((a2 == 0) and (a3 == 0)):
             if j != 0:
-                g -= BA
+                g -= BA 
                 g -= CA
             if l != 0:
                 g -= AC
@@ -104,7 +102,47 @@ def return_rate(i,j,k,l,N):
             g = CA
         else:
             g = 0.
-    return g
+
+    return g    
+
+
+def custom_sum(i, N):
+    if i == 0:
+        res = 0
+    else:
+        res = np.sum([(N + 1 - idx) for idx in np.arange(i)])
+    return res
+
+
+def build_occ(N):    
+    dim = list(np.arange((N+1)))
+    occupation = np.zeros(((N+1)**2))
+    occ_states = []
+    for i,j in itertools.product(dim, dim):
+        if (i+j <= N):
+            occupation[i*(N+1)+j] = 1.
+            occ_states.append((i,j))
+
+    return occupation, occ_states
+
+
+def build_G_filtered(occupation_states, N):
+    filtered_dim = len(occupation_states)
+
+    G = np.zeros((filtered_dim,filtered_dim))
+
+    for i,j in itertools.product(occupation_states, occupation_states):
+        alpha_1 = i[0] - j[0]
+        alpha_2 = i[1] - j[1]
+        
+        if ((alpha_2 < -1) or (alpha_2 > 1)):
+            continue
+        if ((alpha_1 < -1) or (alpha_1 > 1)):
+            continue
+        
+        G[custom_sum(i[0], N)+i[1],custom_sum(j[0], N)+j[1]] = return_rate(i[0], j[0], i[1], j[1], N)
+
+    return G
 
 
 def build_G(N):
@@ -119,7 +157,7 @@ def build_G(N):
     occupation_filled = False
     disallowed = True
 
-    for i in tqdm(dim_1):
+    for i in dim_1:
         cnt_1_y = 0
         cnt_2_y = 0
 
@@ -136,7 +174,7 @@ def build_G(N):
                 if (cnt_2_y == (N+1)):
                     cnt_2_y = 0
                     cnt_1_y += 1
-                continue
+                continue 
 
             occupation[j] = 1.
 
@@ -146,7 +184,7 @@ def build_G(N):
                     cnt_2_y = 0
                     cnt_1_y += 1
                 continue
-
+            
             if ((alpha_1 < -1) or (alpha_1 > 1)):
                 cnt_2_y += 1
                 if (cnt_2_y == (N+1)):
@@ -174,26 +212,25 @@ def build_G(N):
             cnt_1_x += 1
     return G, occ
 
-
+        
 def P_dot(t,P):
     return np.matmul(G, P)
-
+            
 
 def error(p_curr, p_prev):
     return np.sqrt(np.sum((p_curr-p_prev)**2))
-# %%
+
+#%%
+
 for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
 
-        G, occupation_vector = build_G(N)
-        idx_list = np.where(occupation_vector == 0)[0]
+        
+        vec, states = build_occ(N)    
+        G = build_G_filtered(states,N)
 
-        G = np.delete(G, idx_list, axis = 0)
-        G = np.delete(G, idx_list, axis = 1)
-
-        n_allowed_states = len(occupation_vector) - len(idx_list)
-        P_0 = np.ones(n_allowed_states)
+        P_0 = np.ones(len(states))
         P_0 = P_0/np.sum(P_0)
 
         res = RK45(P_dot, t0 = 0, y0 = P_0, t_bound = t_max)
@@ -213,19 +250,15 @@ for v_2 in v_2_range:
             if i > error_shift:
                 if (np.abs(error_values[i] - error_values[i-error_shift]) < error_offset):
                     break
-
+            
             if res.status == 'finished':
                 break
-
-        solution = occupation_vector.copy()
-        solution[occupation_vector == 1] = P_values[-1]/(np.sum(P_values[-1]))
+    
+        solution = vec.copy()
+        solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
-        
-        folder = os.path.join(path,"RKI_results")
-        namefile = os.path.join(folder,"monostable", \
-                    "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
-                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
-        np.savetxt(namefile, solution)
+
+
         fig = plt.figure(figsize=(8,6))
         plt.imshow(solution,origin='lower',interpolation='nearest')
         plt.colorbar()
@@ -234,4 +267,6 @@ for v_2 in v_2_range:
         plt.ylabel("$n_C$",size=14)
         plt.tight_layout()
         plt.show()
-#plt.plot(error_values)
+
+
+# %%
