@@ -1,21 +1,28 @@
-#%%
+# %%
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.integrate import RK45
 from tqdm import tqdm
+from tqdm.contrib.itertools import product
+import os
+os.chdir("/home/PERSONALE/stefano.polizzi/spolizzi/laplacian graph theory")
+path = %pwd
+from time import sleep
 import itertools
-
+# %%
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_2_range = [2.49]
-
-N_range = np.arange(15,16,5)
+v_2_range = np.linspace(1.5,3.52,51)
+N_min = 5
+N_max = 305
+N_step = 10
+N_range = np.arange(N_min, N_max+1, N_step)
 
 t_max = 3000
 
-error_shift = 50            #delay
+error_shift = 150           #delay
 error_offset = 1e-06        #difference
 
 
@@ -78,7 +85,7 @@ def return_rate(i,j,k,l,N):
             g = CB
         elif ((a2 == 0) and (a3 == 0)):
             if j != 0:
-                g -= BA 
+                g -= BA
                 g -= CA
             if l != 0:
                 g -= AC
@@ -103,7 +110,7 @@ def return_rate(i,j,k,l,N):
         else:
             g = 0.
 
-    return g    
+    return g
 
 
 def custom_sum(i, N):
@@ -114,7 +121,7 @@ def custom_sum(i, N):
     return res
 
 
-def build_occ(N):    
+def build_occ(N):
     dim = list(np.arange((N+1)))
     occupation = np.zeros(((N+1)**2))
     occ_states = []
@@ -131,15 +138,15 @@ def build_G_filtered(occupation_states, N):
 
     G = np.zeros((filtered_dim,filtered_dim))
 
-    for i,j in itertools.product(occupation_states, occupation_states):
+    for i,j in tqdm(list(itertools.product(occupation_states, occupation_states))):
         alpha_1 = i[0] - j[0]
         alpha_2 = i[1] - j[1]
-        
+
         if ((alpha_2 < -1) or (alpha_2 > 1)):
             continue
         if ((alpha_1 < -1) or (alpha_1 > 1)):
             continue
-        
+
         G[custom_sum(i[0], N)+i[1],custom_sum(j[0], N)+j[1]] = return_rate(i[0], j[0], i[1], j[1], N)
 
     return G
@@ -174,7 +181,7 @@ def build_G(N):
                 if (cnt_2_y == (N+1)):
                     cnt_2_y = 0
                     cnt_1_y += 1
-                continue 
+                continue
 
             occupation[j] = 1.
 
@@ -184,7 +191,7 @@ def build_G(N):
                     cnt_2_y = 0
                     cnt_1_y += 1
                 continue
-            
+
             if ((alpha_1 < -1) or (alpha_1 > 1)):
                 cnt_2_y += 1
                 if (cnt_2_y == (N+1)):
@@ -212,10 +219,10 @@ def build_G(N):
             cnt_1_x += 1
     return G, occ
 
-        
+
 def P_dot(t,P):
     return np.matmul(G, P)
-            
+
 
 def error(p_curr, p_prev):
     return np.sqrt(np.sum((p_curr-p_prev)**2))
@@ -226,8 +233,8 @@ for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
 
-        
-        vec, states = build_occ(N)    
+
+        vec, states = build_occ(N)
         G = build_G_filtered(states,N)
 
         P_0 = np.ones(len(states))
@@ -250,19 +257,22 @@ for v_2 in v_2_range:
             if i > error_shift:
                 if (np.abs(error_values[i] - error_values[i-error_shift]) < error_offset):
                     break
-            
+
             if res.status == 'finished':
                 break
-    
+
         solution = vec.copy()
         solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
-
-
+        folder = os.path.join(path,"RKI_results")
+        namefile = os.path.join(folder,"monostable", \
+                    "{}_monostable_RKI_v2_{}_.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
+                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
+        np.savetxt(namefile, solution)
         fig = plt.figure(figsize=(8,6))
         plt.imshow(solution,origin='lower',interpolation='nearest')
         plt.colorbar()
-        plt.title(u"Solution with $K_1 = {}$ , $K_2 = {}$, $v_1 = {}$, $v_2 = {}$ and $N = {}$".format(K_1, K_2, v_1, v_2, N))
+        plt.title(u"Solution with $K_1 = {}$ , $K_2 = {}$, $v_1 = {}$, $v_2 = {}$ and $N = {}$".format(K_1, K_2, v_1, f"{v_2:.2f}", N))
         plt.xlabel("$n_A$",size=14)
         plt.ylabel("$n_C$",size=14)
         plt.tight_layout()
@@ -270,3 +280,4 @@ for v_2 in v_2_range:
 
 
 # %%
+#plot(error_values)
