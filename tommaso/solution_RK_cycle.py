@@ -261,7 +261,7 @@ for v_2 in v_2_range:
             if res.status == 'finished':
                 break
 
-        solution = vec.copy()
+        solution = np.zeros(vec.shape)
         solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
         folder = os.path.join(path,"RKI_results")

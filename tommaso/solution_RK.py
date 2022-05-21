@@ -10,7 +10,7 @@ import itertools
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-N = 100
+N = 10
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
@@ -308,10 +308,9 @@ for i in tqdm(range(t_max)):
 #------------------ Get solution -------------------#
 #---------------------------------------------------#
 
-solution = vec.copy()
+solution = np.zeros(vec.shape)
 solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
 solution = solution.reshape((N+1,N+1))
-
 
 #%%
 #------------------ Plot solution ------------------#
