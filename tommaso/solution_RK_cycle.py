@@ -266,9 +266,13 @@ for v_2 in v_2_range:
         solution = solution.reshape((N+1,N+1))
         folder = os.path.join(path,"RKI_results")
         namefile = os.path.join(folder,"monostable", \
-                    "{}_monostable_RKI_v2_{}_.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
+                    "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
                     else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
+        namefile_G = os.path.join(folder,"monostable", \
+                    "{}_monostable_RKI_v2_{}_G.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
+                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}_G.txt".format(N, f"{v_2:.2f}"))
         np.savetxt(namefile, solution)
+        np.savetxt(namefile_G,G)
         fig = plt.figure(figsize=(8,6))
         plt.imshow(solution,origin='lower',interpolation='nearest')
         plt.colorbar()
