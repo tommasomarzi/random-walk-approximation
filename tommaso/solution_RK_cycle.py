@@ -15,15 +15,16 @@ K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
 v_2_range = np.linspace(1.5,3.52,51)
+#np.linspace(1.62,3.52,51)  #after server interruption
 N_min = 5
 N_max = 305
 N_step = 10
 N_range = np.arange(N_min, N_max+1, N_step)
 
 t_max = 3000
-
+i_osc = 30 #period over which we test the error
 error_shift = 150           #delay
-error_offset = 1e-06        #difference
+error_offset = 2.2e-9        #difference
 
 
 def pi_AA(xA,xB,xC, k1, k2, v1, v2):
@@ -224,8 +225,8 @@ def P_dot(t,P):
     return np.matmul(G, P)
 
 
-def error(p_curr, p_prev):
-    return np.sqrt(np.sum((p_curr-p_prev)**2))
+def error(p_curr, p_prev, N):
+    return np.sqrt(np.sum((p_curr-p_prev)**2))/N
 
 #%%
 
@@ -236,7 +237,6 @@ for v_2 in v_2_range:
 
         vec, states = build_occ(N)
         G = build_G_filtered(states,N)
-
         P_0 = np.ones(len(states))
         P_0 = P_0/np.sum(P_0)
 
@@ -251,13 +251,13 @@ for v_2 in v_2_range:
             res.step()
             t_values.append(res.t)
             P_values.append(res.y)
-
-            error_values.append(error(P_values[i],P_values[i-1]))
-
-            if i > error_shift:
-                if (np.abs(error_values[i] - error_values[i-error_shift]) < error_offset):
+            '''
+            error_values.append(error(P_values[i],P_values[i-1],N))
+            if i > error_shift + i_osc:
+                if np.alltrue(np.abs(np.subtract(error_values[(i-i_osc):i],
+                error_values[(i-i_osc - error_shift):(i - error_shift)])) < error_offset):
                     break
-
+            '''
             if res.status == 'finished':
                 break
 
@@ -284,4 +284,4 @@ for v_2 in v_2_range:
 
 
 # %%
-#plot(error_values)
+#plt.plot(error_values)
