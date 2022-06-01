@@ -1,5 +1,6 @@
 # %%
 import numpy as np
+import numpy.linalg as LA
 from matplotlib import pyplot as plt
 from scipy.integrate import RK45
 from tqdm import tqdm
@@ -21,10 +22,13 @@ N_max = 305
 N_step = 10
 N_range = np.arange(N_min, N_max+1, N_step)
 
+
 t_max = 3000
 i_osc = 30 #period over which we test the error
 error_shift = 150           #delay
 error_offset = 2.2e-9        #difference
+
+fiedler_list = []
 
 
 def pi_AA(xA,xB,xC, k1, k2, v1, v2):
@@ -221,6 +225,12 @@ def build_G(N):
     return G, occ
 
 
+def get_fiedler(matrix):
+    eigvals, _ = LA.eig(matrix)
+    fielder = np.sort(eigvals)[-2]
+    return fielder
+
+
 def P_dot(t,P):
     return np.matmul(G, P)
 
@@ -239,6 +249,8 @@ for v_2 in v_2_range:
         G = build_G_filtered(states,N)
         P_0 = np.ones(len(states))
         P_0 = P_0/np.sum(P_0)
+        f = get_fiedler(G)
+        fiedler_list.append(f)
 
         res = RK45(P_dot, t0 = 0, y0 = P_0, t_bound = t_max)
 
@@ -246,7 +258,7 @@ for v_2 in v_2_range:
         P_values = []
         error_values = []
         P_values.append(P_0)
-
+        
         for i in tqdm(range(t_max)):
             res.step()
             t_values.append(res.t)
@@ -260,7 +272,7 @@ for v_2 in v_2_range:
             '''
             if res.status == 'finished':
                 break
-
+        
         solution = np.zeros(vec.shape)
         solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))

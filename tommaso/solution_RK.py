@@ -5,12 +5,13 @@ from matplotlib import pyplot as plt
 from scipy.integrate import RK45
 from tqdm import tqdm
 import itertools
+import numpy.linalg as LA
 
 #%%
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-N = 10
+N = 30
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
@@ -27,9 +28,9 @@ v3 = v_3
 v4 = v_4 
 
 t_max = 3000
-
-error_shift = 50            #delay
-error_offset = 1e-06        #difference
+i_osc = 30
+error_shift = 100            #delay
+error_offset = 1e-4        #difference
 
 #%%
 #----------------- Transition rates ----------------#
@@ -249,6 +250,16 @@ def build_G():
 
 
 #%%
+#---------------- Get Fiedler eigval ---------------#
+#---------------------------------------------------#
+
+def get_fiedler(G):
+    eigvals, _ = LA.eig(G)
+    fielder = np.sort(eigvals)[-2]
+    return fielder
+
+
+#%%
 #----------------- Define function -----------------#
 #---------------------------------------------------#
 
@@ -260,8 +271,9 @@ def P_dot(t,P):
 #------------------ Define error -------------------#
 #---------------------------------------------------#
 
-def error(p_curr, p_prev):
-    return np.sqrt(np.sum((p_curr-p_prev)**2))
+def error(p_curr, p_prev, N):
+    #return (np.sqrt(np.sum((p_curr-p_prev)**2))/N)
+    return (np.sqrt(np.sum((p_curr-p_prev)**2)))
 
 
 # %%
@@ -270,6 +282,8 @@ def error(p_curr, p_prev):
 
 vec, states = build_occ(N)    
 G = build_G_filtered(states)
+
+f = get_fiedler(G)
 
 P_0 = np.ones(len(states))
 P_0 = P_0/np.sum(P_0)
@@ -295,12 +309,25 @@ for i in tqdm(range(t_max)):
     res.step()
     t_values.append(res.t)
     P_values.append(res.y)
-    error_values.append(error(P_values[i],P_values[i-1]))
+    error_values.append(error(P_values[i],P_values[i-1],N))
 
     if i > error_shift:
         if (np.abs(error_values[i] - error_values[i-error_shift]) < error_offset):
+            print(i)
+            print("break shift")
             break
+    
+    #error_values.append(error(P_values[i],P_values[i-1],N))
+    #if i > error_shift + i_osc:
+    #    if np.alltrue(np.abs(np.subtract(error_values[(i-i_osc):i],
+    #    error_values[(i-i_osc - error_shift):(i - error_shift)])) < error_offset):
+    #        print(i)
+    #        print("break shift")
+    #        break
+
     if res.status == 'finished':
+        print(i)
+        print("break status")
         break
 
 
