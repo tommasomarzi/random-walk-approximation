@@ -16,7 +16,7 @@ import itertools
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_2_range = np.linspace(1.5,3.52,51) # for server bio07 to reduce time
+v_2_range = np.linspace(1.5,3.52,26) # for server bio07 to reduce time
 #np.linspace(1.5,3.52,51)
 #np.linspace(1.62,3.52,51)  #after server interruption
 N_min = 5
@@ -242,7 +242,7 @@ def error(p_curr, p_prev, N):
 
 #%%
 
-for v_2 in v_2_range[1:]:
+for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
 
