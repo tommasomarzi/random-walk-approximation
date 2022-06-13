@@ -7,7 +7,8 @@ from tqdm import tqdm
 from tqdm.contrib.itertools import product
 import os
 os.chdir("/home/PERSONALE/stefano.polizzi/spolizzi/laplacian graph theory")
-path = %pwd
+#os.chdir("/home/PERSONALE/stefano.polizzi")
+path = os.path.abspath(os.getcwd()) # %pwd
 from time import sleep
 import itertools
 # %%
@@ -15,10 +16,11 @@ import itertools
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_2_range = np.linspace(1.5,3.52,51)
+v_2_range = np.linspace(1.5,3.52,51) # for server bio07 to reduce time
+#np.linspace(1.5,3.52,51)
 #np.linspace(1.62,3.52,51)  #after server interruption
 N_min = 5
-N_max = 305
+N_max = 295
 N_step = 10
 N_range = np.arange(N_min, N_max+1, N_step)
 
@@ -240,7 +242,7 @@ def error(p_curr, p_prev, N):
 
 #%%
 
-for v_2 in v_2_range:
+for v_2 in v_2_range[1:]:
     for N in N_range:
         v_3 = v_2
 
@@ -258,7 +260,7 @@ for v_2 in v_2_range:
         P_values = []
         error_values = []
         P_values.append(P_0)
-        
+
         for i in tqdm(range(t_max)):
             res.step()
             t_values.append(res.t)
@@ -272,7 +274,7 @@ for v_2 in v_2_range:
             '''
             if res.status == 'finished':
                 break
-        
+
         solution = np.zeros(vec.shape)
         solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
@@ -281,10 +283,10 @@ for v_2 in v_2_range:
                     "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
                     else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
         namefile_G = os.path.join(folder,"monostable", \
-                    "{}_monostable_RKI_v2_{}_G.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
-                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}_G.txt".format(N, f"{v_2:.2f}"))
+                    "{}_monostable_RKI_v2_{}_Friedler.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
+                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}_Friedler.txt".format(N, f"{v_2:.2f}"))
         np.savetxt(namefile, solution)
-        np.savetxt(namefile_G,G)
+        np.savetxt(namefile_G,np.array([f]))
         fig = plt.figure(figsize=(8,6))
         plt.imshow(solution,origin='lower',interpolation='nearest')
         plt.colorbar()
