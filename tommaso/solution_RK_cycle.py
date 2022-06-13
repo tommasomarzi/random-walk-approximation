@@ -283,8 +283,8 @@ for v_2 in v_2_range[1:]:
                     "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
                     else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
         namefile_G = os.path.join(folder,"monostable", \
-                    "{}_monostable_RKI_v2_{}_Friedler.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
-                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}_Friedler.txt".format(N, f"{v_2:.2f}"))
+                    "{}_monostable_RKI_v2_{}_Fiedler.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
+                    else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}_Fiedler.txt".format(N, f"{v_2:.2f}"))
         np.savetxt(namefile, solution)
         np.savetxt(namefile_G,np.array([f]))
         fig = plt.figure(figsize=(8,6))
