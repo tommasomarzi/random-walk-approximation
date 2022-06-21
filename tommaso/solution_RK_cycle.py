@@ -20,7 +20,7 @@ v_2_range = np.linspace(1.5,3.52,26) # for server bio07 to reduce time
 #np.linspace(1.5,3.52,51)
 #np.linspace(1.62,3.52,51)  #after server interruption
 N_min = 5
-N_max = 295
+N_max = 295 #205 for server
 N_step = 10
 N_range = np.arange(N_min, N_max+1, N_step)
 
