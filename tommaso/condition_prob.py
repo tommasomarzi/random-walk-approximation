@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 
 # %%
 
-N = 15
-K_1 = 1.
-K_2 = 2.
+K_1 = 0.1
+K_2 = 1.
 v_1 = 1.
 #v_2_range = np.linspace(1.5,3.52,51)
-v_2_range = [3.5]
+v_2_range = [1.82,2.5,3.04]
+N_range = [105] #np.arange(15,206,10)
 
 #%%
 #----------------- Transition rates ----------------#
@@ -125,109 +125,69 @@ def compute_all(x,y,z,v2):
     return p_A_der_a,p_A_der_b,p_A_der_c,p_B_der_a,p_B_der_b,p_B_der_c,p_C_der_a,p_C_der_b,p_C_der_c
 
 # %%
+#--------------------- Def plot --------------------#
+#---------------------------------------------------#
+
+def do_plot(p_x,p_y,p_z,v2,name):
+    fig, ax = plt.subplots(3, figsize=(12,8))
+
+    #scale = ax[0].imshow(np.abs(p_x.T),origin='lower',interpolation='nearest')
+    scale = ax[0].imshow(p_x.T,origin='lower',interpolation='nearest')
+    ax[0].set_xlabel("$n_A$",size=14)
+    ax[0].set_ylabel("$n_C$",size=14)
+    ax[0].set_title("{} w.r.t. A with v2 = {}".format(name,v2))
+    fig.colorbar(scale, ax = ax[0])
+
+    #scale = ax[1].imshow(np.abs(p_y.T),origin='lower',interpolation='nearest')
+    scale = ax[1].imshow(p_y.T,origin='lower',interpolation='nearest')
+    ax[1].set_xlabel("$n_A$",size=14)
+    ax[1].set_ylabel("$n_C$",size=14)
+    ax[1].set_title("{} w.r.t. B with v2 = {}".format(name,v2))
+    fig.colorbar(scale, ax = ax[1])
+
+    #scale = ax[2].imshow(np.abs(p_z.T),origin='lower',interpolation='nearest')
+    scale = ax[2].imshow(p_z.T,origin='lower',interpolation='nearest')
+    ax[2].set_xlabel("$n_A$",size=14)
+    ax[2].set_ylabel("$n_C$",size=14)
+    ax[2].set_title("{} w.r.t. C with v2 = {}".format(name,v2))
+    fig.colorbar(scale, ax = ax[2])
+    fig.tight_layout()
+    #fig.show()
+
+# %%
 #---------------------- Cycle ----------------------#
 #---------------------------------------------------#
 
-p_A_x = np.zeros((N+1, N+1))
-p_B_x = np.zeros((N+1, N+1))
-p_C_x = np.zeros((N+1, N+1))
-p_A_y = np.zeros((N+1, N+1))
-p_B_y = np.zeros((N+1, N+1))
-p_C_y = np.zeros((N+1, N+1))
-p_A_z = np.zeros((N+1, N+1))
-p_B_z = np.zeros((N+1, N+1))
-p_C_z = np.zeros((N+1, N+1))
+plot = True
+search_cond = False
 
-for v_2 in v_2_range:
-    for i in np.arange(N+1):
-        for j in np.arange(N+1-i):
-            assert(i+j <= N)
-            p_A_x[i,j],p_A_y[i,j],p_A_z[i,j],p_B_x[i,j],p_B_y[i,j],p_B_z[i,j],p_C_x[i,j],p_C_y[i,j],p_C_z[i,j] = compute_all(i/N,1-i/N-j/N,j/N,v_2)
-    p_list = [p_A_x[i,j], p_A_y[i,j],p_A_z[i,j],p_B_x[i,j],p_B_y[i,j],p_B_z[i,j],p_C_x[i,j],p_C_y[i,j],p_C_z[i,j] ]
-    for el in p_list:
-        if (np.abs(el) > 1).any():
-            raise ValueError("Found module greater than 1 in v_2 = {}".format(v_2))
+for N in N_range:
+    p_A_x = np.zeros((N+1, N+1))
+    p_B_x = np.zeros((N+1, N+1))
+    p_C_x = np.zeros((N+1, N+1))
+    p_A_y = np.zeros((N+1, N+1))
+    p_B_y = np.zeros((N+1, N+1))
+    p_C_y = np.zeros((N+1, N+1))
+    p_A_z = np.zeros((N+1, N+1))
+    p_B_z = np.zeros((N+1, N+1))
+    p_C_z = np.zeros((N+1, N+1))
+    for v_2 in v_2_range:
+        for i in np.arange(N+1):
+            for j in np.arange(N+1-i):
+                assert(i+j <= N)
+                p_A_x[i,j],p_A_y[i,j],p_A_z[i,j],p_B_x[i,j],p_B_y[i,j],p_B_z[i,j],p_C_x[i,j],p_C_y[i,j],p_C_z[i,j] = compute_all(i/N,1-i/N-j/N,j/N,v_2)
+        p_list = [p_A_x[i,j], p_A_y[i,j],p_A_z[i,j],p_B_x[i,j],p_B_y[i,j],p_B_z[i,j],p_C_x[i,j],p_C_y[i,j],p_C_z[i,j] ]
+        
+        if search_cond:
+            for el in p_list:
+                if (np.abs(el) > 1).any():
+                    print("Found module greater than 1 with v_2 = {} and N = {}".format(v_2,N))
+        if plot:
+            do_plot(p_A_x, p_A_y, p_A_z, v_2, "p_a")
+            #do_plot(p_B_x, p_B_y, p_B_z, v_2, "p_b")
+            #do_plot(p_C_x, p_C_y, p_C_z, v_2, "p_c")
 
-
-# %%
-#--------------------- Plot p_A --------------------#
-#---------------------------------------------------#
-
-fig, ax = plt.subplots(3, figsize=(12,8))
-
-scale = ax[0].imshow(np.abs(p_A_x.T),origin='lower',interpolation='nearest')
-ax[0].set_xlabel("$n_A$",size=14)
-ax[0].set_ylabel("$n_C$",size=14)
-ax[0].set_title("p_A w.r.t. A")
-fig.colorbar(scale, ax = ax[0])
-
-scale = ax[1].imshow(np.abs(p_A_y.T),origin='lower',interpolation='nearest')
-ax[1].set_xlabel("$n_A$",size=14)
-ax[1].set_ylabel("$n_C$",size=14)
-ax[1].set_title("p_A w.r.t. B")
-fig.colorbar(scale, ax = ax[1])
-
-scale = ax[2].imshow(np.abs(p_A_z.T),origin='lower',interpolation='nearest')
-ax[2].set_xlabel("$n_A$",size=14)
-ax[2].set_ylabel("$n_C$",size=14)
-ax[2].set_title("p_A w.r.t. C")
-fig.colorbar(scale, ax = ax[2])
-fig.tight_layout()
-fig.show()
-
-#%%
-#--------------------- Plot p_B --------------------#
-#---------------------------------------------------#
-
-fig, ax = plt.subplots(3, figsize=(14,8))
-
-scale = ax[0].imshow(np.abs(p_B_x.T),origin='lower',interpolation='nearest')
-ax[0].set_xlabel("$n_A$",size=14)
-ax[0].set_ylabel("$n_C$",size=14)
-ax[0].set_title("p_B w.r.t. A")
-fig.colorbar(scale, ax = ax[0])
-
-scale = ax[1].imshow(np.abs(p_B_y.T),origin='lower',interpolation='nearest')
-ax[1].set_xlabel("$n_A$",size=14)
-ax[1].set_ylabel("$n_C$",size=14)
-ax[1].set_title("p_B w.r.t. B")
-fig.colorbar(scale, ax = ax[1])
-
-scale = ax[2].imshow(np.abs(p_B_z.T),origin='lower',interpolation='nearest')
-ax[2].set_xlabel("$n_A$",size=14)
-ax[2].set_ylabel("$n_C$",size=14)
-ax[2].set_title("p_B w.r.t. C")
-fig.colorbar(scale, ax = ax[2])
-
-fig.tight_layout()
-fig.show()
-
-#%%
-#--------------------- Plot p_C --------------------#
-#---------------------------------------------------#
-
-fig, ax = plt.subplots(3, figsize=(14,8))
-
-scale = ax[0].imshow(np.abs(p_C_x),origin='lower',interpolation='nearest')
-ax[0].set_xlabel("$n_A$",size=14)
-ax[0].set_ylabel("$n_C$",size=14)
-ax[0].set_title("p_C w.r.t. A")
-fig.colorbar(scale, ax = ax[0])
-
-scale = ax[1].imshow(np.abs(p_C_y),origin='lower',interpolation='nearest')
-ax[1].set_xlabel("$n_A$",size=14)
-ax[1].set_ylabel("$n_C$",size=14)
-ax[1].set_title("p_C w.r.t. B")
-fig.colorbar(scale, ax = ax[1])
-
-scale = ax[2].imshow(np.abs(p_C_z),origin='lower',interpolation='nearest')
-ax[2].set_xlabel("$n_A$",size=14)
-ax[2].set_ylabel("$n_C$",size=14)
-ax[2].set_title("p_C w.r.t. C")
-fig.colorbar(scale, ax = ax[2])
-
-fig.tight_layout()
-fig.show()
-
+        #print(np.mean(p_A_x),np.mean(p_A_y),np.mean(p_A_z))
+        #print(np.mean(p_B_x),np.mean(p_B_y),np.mean(p_B_z))
 
 # %%
