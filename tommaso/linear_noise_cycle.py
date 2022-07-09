@@ -13,14 +13,14 @@ import os
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-K_1 = K_4 = 0.9
+K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
 #v_3 = v_2 = 0.4
-N_min = 15
-N_max = 105
+N_min = 5
+N_max = 505
 N_step = 10
-v_2_values = [1.8, 3.0]
+v_2_values = [1.82, 2.47, 3.04]
 peaks = ['A', 'C']
 stability = None
 
@@ -28,12 +28,12 @@ stability = None
 #---------------------------------------------------#
 
 def v2_threshold(k1,k2,v1,v2):
-    v2_high = v1*(1+k2)/(1 - 2*k1)
-    v2_low =  v1*(1+k2)/(1 + 2*k1)
-    if v2_high > v2_low:
-        return [v2_low, v2_high]
-    elif v2_high < v2_low:
-        return [v2_high, v2_low]
+    lhs = v2 - v1*(1+k2)
+    rhs = 2*k1*v2
+    if lhs >= rhs or lhs <= -rhs:
+        return True
+    else:
+        return False
 
 
 #----------------- Transition rates ----------------#
@@ -116,15 +116,13 @@ for v_2 in v_2_values:
 
     print("\nStarting simulation with v_1 = {}, v_2 = {}, K_1 = {}, K_2 = {}".format(v_1,v_2,K_1,K_2))     
     
-    th = v2_threshold(K_1,K_2,v_1,v_2)
-
-    print("The threshold is: (low = {}, high = {})".format(th[0],th[1]))
+    check_bistability = v2_threshold(K_1,K_2,v_1,v_2)
     
     for N in np.arange(N_min, N_max + 1, N_step):
 
         Z_list = []
 
-        print("\nStarting simulation with N = {}".format(N))
+        print("\nStarting simulation with N = {} and v_2 = {}".format(N,v_2))
 
         for peak in peaks:
             K_4 = K_1
@@ -137,7 +135,8 @@ for v_2 in v_2_values:
                         K_2*v_4*z/(K_2*K_4 + K_4*y + K_2*z) - K_1*v_3*y/(K_1*K_3 + K_1*y + K_3*x),
                         x + y + z - 1]
 
-            if ((v_2 <= th[0]) or (v_2 >= th[1])):
+            if check_bistability:
+                print("Bistable system")
                 if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):
                     xA1_star, xB_star, xC1_star, xA2_star, xC2_star = null_eigenvector_neq(K_1,K_2,v_1,v_2)
                     stability = 'bistable'
@@ -150,6 +149,7 @@ for v_2 in v_2_values:
                         xA_star = xA2_star
                         xC_star = xC2_star
             else:
+                print("Monostable system")
                 stability = 'monostable'
                 crit_ns = fsolve(null_eigenvector_ns, [0.,1.,0.])
                 xA_star, xB_star, xC_star = null_eigenvector_eq(K_1,K_2,v_1,v_2)
@@ -291,14 +291,8 @@ for v_2 in v_2_values:
 
         #--------------- Save pic and file -----------------#
         #---------------------------------------------------#   
-        namefile = str(N)
-        if stability == "bistable":
-            namefile = 'results/LNA_results/bistable/' + namefile
-            namefile += '_bistable_LNA'
-        else:
-            namefile = 'results/LNA_results/monostable/' + namefile
-            namefile += '_monostable_LNA'
 
+        namefile = 'LNA_results/{}/{}_{}_LNA_v2_{:.2f}'.format(stability,N,stability,v_2)
         np.savetxt(namefile+'.txt', Z_norm)
 
 
