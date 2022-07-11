@@ -11,6 +11,7 @@ import numpy as np
 from matplotlib import rc
 import os
 import cv2 #resize images
+from scipy.interpolate import interp2d
 from scipy.special import kl_div
 from scipy.spatial.distance import squareform, pdist, jensenshannon # for Wasserstein distance
 from scipy.optimize import linprog  # for Wasserstein distance
@@ -107,6 +108,21 @@ for (v_2,v_3) in ([1.82, 1.82], [2.47, 2.47], [3.04, 3.04]):
                     data_RKI = np.where(data_RKI<0,0,data_RKI)
                 except:
                     data_RKI = np.zeros(np.shape(data_MUL))
+                    
+        if N < N_max:           #interpolation
+            axis_cur = (np.arange(N+1))/N
+            axis_max = (np.arange(N_max+1))/N_max           
+            itp = interp2d(axis_cur, axis_cur, data_MUL)
+            data_MUL = itp(axis_max, axis_max)      
+            itp = interp2d(axis_cur, axis_cur, data_RKI)
+            data_RKI = itp(axis_max, axis_max)      
+            itp = interp2d(axis_cur, axis_cur, data_LNA)
+            data_LNA = itp(axis_max, axis_max)      
+            itp = interp2d(axis_cur, axis_cur, data_MUL_star)
+            data_MUL_star = itp(axis_max, axis_max)      
+            itp = interp2d(axis_cur, axis_cur, data_GIL)
+            data_GIL = itp(axis_max, axis_max)
+    
         error_L1_MUL[i] = np.mean(abs(data_MUL-data_RKI))
         error_L2_MUL[i] = np.sqrt(np.mean((data_MUL-data_RKI)**2))
         error_KL_MUL[i] = jensenshannon(data_RKI.flatten(), data_MUL.flatten(), base = 2)
