@@ -4,3 +4,6 @@ LNA_results/**
 
 *.png
 *.zip
+
+interpolation.py
+exact_solution.py
