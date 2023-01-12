@@ -7,3 +7,4 @@ LNA_results/**
 
 interpolation.py
 exact_solution.py
+check_derivative_prob.py
