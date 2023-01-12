@@ -19,7 +19,7 @@ def pi_AA(xA,xB,xC):
     return AA
 
 def pi_AB(xA,xB,xC):
-    AB = K_4*v_2/(K_2*K_4 + N*K_4*xB + N*K_2*xC)
+    AB = K_4*v_2/(K_2*K_4 + K_4*xB + K_2*xC)
     return AB
 
 def pi_AC(xA,xB,xC):
@@ -27,7 +27,7 @@ def pi_AC(xA,xB,xC):
     return AC
 
 def pi_BA(xA,xB,xC):
-    BA = K_3*v_1/(K_1*K_3 + N*K_1*xB + N*K_3*xA)
+    BA = K_3*v_1/(K_1*K_3 + K_1*xB + K_3*xA)
     return BA
 
 def pi_BB(xA,xB,xC):
@@ -35,7 +35,7 @@ def pi_BB(xA,xB,xC):
     return BB
 
 def pi_BC(xA,xB,xC):
-    BC = K_2*v_4/(K_2*K_4 + N*K_4*xB + N*K_2*xC)
+    BC = K_2*v_4/(K_2*K_4 + K_4*xB + K_2*xC)
     return BC
 
 def pi_CA(xA,xB,xC):
@@ -43,7 +43,7 @@ def pi_CA(xA,xB,xC):
     return CA
 
 def pi_CB(xA,xB,xC):
-    CB = K_1*v_3/(K_1*K_3 + N*K_1*xB + N*K_3*xA)
+    CB = K_1*v_3/(K_1*K_3 + K_1*xB + K_3*xA)
     return CB
 
 def pi_CC(xA,xB,xC):
@@ -54,11 +54,11 @@ def pi_CC(xA,xB,xC):
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
-N = 85
-K_1 = K_4 = 1.
-K_2 = K_3 = 2.
+N = 15
+K_1 = K_4 = 0.1
+K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_3 = v_2 = 1.15
+v_3 = v_2 = 1.82
 
 #%%
 #------------------ Critical point -----------------#
@@ -76,6 +76,16 @@ crit_ns = fsolve(null_eigenvector_ns, [0, 1, 0])
 print(crit_ns)
 
 #%%
+
+def v2_threshold(k1,k2,v1,v2):
+    lhs = v2 - v1*(1+k2)
+    rhs = 2*k1*v2
+    if lhs >= rhs or lhs <= -rhs:
+        return True
+    else:
+        return False
+
+#%%
 #---- Exact solution
 def null_eigenvector_eq():
     xB = 1/(1 + (K_1*v_2*2/(K_2*v_1)))
@@ -86,22 +96,26 @@ def null_eigenvector_eq():
 def null_eigenvector_neq():
     xB = K_2*v_1/(v_2 - v_1)
 
-    B = - (v_2*(K_1 + N - K_1**2) - v_1*(N + K_2))/(v_2 - v_1)
-    C = (v_2*K_1*K_1*(1 + v_1/(v_2 - v_1)))/(v_2 - v_1)
+    B = - (v_2 - v_1*(1 + K_2))/(v_2 - v_1)
+    #C = (v_2*K_1*K_1*(1 + v_1/(v_2 - v_1)))/(v_2 - v_1)
+    C = (v_2*K_1*K_1*v_2)/((v_2 - v_1)**2)
 
-    xA = (-B + math.sqrt(B**2 - 4*C))/(2*N)
+    xA_1 = (-B + math.sqrt(B**2 - 4*C))/(2)
+    xA_2 = (-B - math.sqrt(B**2 - 4*C))/(2)
 
-    if (xA < 0) or (xA > 1):
-        print("No sense")
-        xA = (-B - math.sqrt(B**2 - 4*C))/(2*N)
+    if (xA_1 < 0) or (xA_1 > 1):
+        print("A problem occured, xA_1: {}".format(xA_1))
 
-    xB = xB/N
+    if (xA_2 < 0) or (xA_2 > 1):
+        print("A problem occured, xA_2: {}".format(xA_2))
+    
+    xC_1 = 1 - xA_1 - xB
+    xC_2 = 1 - xA_2 - xB
+    
+    return xA_1, xB, xC_1, xA_2, xC_2
 
-    xC = 1 - xA - xB
 
-    return xA, xB, xC
-
-xA_star, xB_star, xC_star = null_eigenvector_neq()
+xA_star, xB_star, xC_star = null_eigenvector_eq()
 
 #%%
 print("The critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(xA_star,xB_star,xC_star))
@@ -113,24 +127,24 @@ if np.allclose(crit_ns, [xA_star, xB_star, xC_star]):
 #---------------- Derivatives of L -----------------#
 #---------------------------------------------------#
 
-den_A = (K_1*K_2 + N*K_1*xB_star + N*K_2*xA_star)
-den_C = (K_1*K_2 + N*K_1*xB_star + N*K_2*xC_star)
+den_A = (K_1*K_2 + K_1*xB_star + K_2*xA_star)
+den_C = (K_1*K_2 + K_1*xB_star + K_2*xC_star)
 
-pi_BA_der_A = -(N*(K_2**2)*v_1)/(den_A**2)
-pi_BA_der_B = -(N*K_1*K_2*v_1)/(den_A**2)
+pi_BA_der_A = -((K_2**2)*v_1)/(den_A**2)
+pi_BA_der_B = -(K_1*K_2*v_1)/(den_A**2)
 pi_BA_der_C = 0.
 
 pi_AB_der_A = 0.
-pi_AB_der_B = -(N*(K_1**2)*v_2)/(den_C**2)
-pi_AB_der_C = -(N*K_1*K_2*v_2)/(den_C**2)
+pi_AB_der_B = -((K_1**2)*v_2)/(den_C**2)
+pi_AB_der_C = -(K_1*K_2*v_2)/(den_C**2)
 
-pi_CB_der_A = -(N*K_1*K_2*v_2)/(den_A**2)
-pi_CB_der_B = -(N*(K_1**2)*v_2)/(den_A**2)
+pi_CB_der_A = -(K_1*K_2*v_2)/(den_A**2)
+pi_CB_der_B = -((K_1**2)*v_2)/(den_A**2)
 pi_CB_der_C = 0.
 
 pi_BC_der_A = 0.
-pi_BC_der_B = -(N*K_1*K_2*v_1)/(den_C**2)
-pi_BC_der_C = -(N*(K_2**2)*v_1)/(den_C**2)
+pi_BC_der_B = -(K_1*K_2*v_1)/(den_C**2)
+pi_BC_der_C = -((K_2**2)*v_1)/(den_C**2)
 
 pi_AC_der_A = pi_AC_der_B = pi_AC_der_C = 0.
 
@@ -207,7 +221,7 @@ delta_xC_star = 0
 #------------------ Second moment ------------------#
 #---------------------------------------------------#
 
-precision = 1e-15        #add offset to avoid negative (close to zero) eigenvalues
+precision = 1e-14        #add offset to avoid negative (close to zero) eigenvalues
 
 sigma = linalg.solve_continuous_lyapunov(A + precision*np.eye(*A.shape), D + precision*np.eye(*D.shape))  
 
@@ -229,7 +243,7 @@ def solution():
             assert(i+j <= N)
             #Z[i,j] =  multivariate_normal.pdf([i/N,j/N,1-i/N-j/N], mean=[xA_star,xB_star,xC_star], cov=sigma)
             Z[i,j] =  multivariate_normal.pdf([i/N,1-i/N-j/N,j/N], mean=[xA_star,xB_star,xC_star], cov=sigma)
-    return Z
+    return Z/Z.sum()
 
 Z = np.abs(solution())
 
