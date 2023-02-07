@@ -11,9 +11,39 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.cm as cm
 from scipy.optimize import fsolve
 
+
+#%%
+#----------------- Global parameters ---------------#
+#---------------------------------------------------#
+
+N = 15
+K_1 = K_4 = 0.1
+K_2 = K_3 = 1.
+v_1 = v_4 = 1.
+v_3 = v_2 = 1.82
+stability = None
+
+#%%
+#-------------------- Threshold --------------------#
+#---------------------------------------------------#
+
+def v2_threshold(k1,k2,v1,v2):
+    """
+    Compute condition for bistability (eq. (21.1)).
+    """
+    lhs = v2 - v1*(1+k2)
+    rhs = 2*k1*v2
+    if lhs >= rhs or lhs <= -rhs:
+        return True
+    else:
+        return False
+
+
 #%%
 #----------------- Transition rates ----------------#
 #---------------------------------------------------#
+"""   Functions for the rates of the dual PdPc.    """   
+
 def pi_AA(xA,xB,xC):
     AA = 0.
     return AA
@@ -50,50 +80,38 @@ def pi_CC(xA,xB,xC):
     CC = 0.
     return CC
 
-#%%
-#----------------- Global parameters ---------------#
-#---------------------------------------------------#
-
-N = 15
-K_1 = K_4 = 0.1
-K_2 = K_3 = 1.
-v_1 = v_4 = 1.
-v_3 = v_2 = 1.82
 
 #%%
-#------------------ Critical point -----------------#
-#---------------------------------------------------#
+#--------- Critical point (numerical solution) ---------#
+#-------------------------------------------------------#
 
-#---- Numerical solution
 def null_eigenvector_ns(vector):
+    """
+    Compute critical point numerically through scipy.optimize
+    """
     x,y,z = vector
     return [K_3*v_1*x/(K_1*K_3/N + K_1*y + K_3*x) - K_4*v_2*y/(K_2*K_4/N + K_4*y + K_2*z),
             K_2*v_4*z/(K_2*K_4/N + K_4*y + K_2*z) - K_1*v_3*y/(K_1*K_3/N + K_1*y + K_3*x),
             x + y + z - 1]
 
-crit_ns = fsolve(null_eigenvector_ns, [0, 1, 0])
-
-print(crit_ns)
 
 #%%
+#----------- Critical point (exact solution) -----------#
+#-------------------------------------------------------#
 
-def v2_threshold(k1,k2,v1,v2):
-    lhs = v2 - v1*(1+k2)
-    rhs = 2*k1*v2
-    if lhs >= rhs or lhs <= -rhs:
-        return True
-    else:
-        return False
-
-#%%
-#---- Exact solution
 def null_eigenvector_eq():
+    """
+    Compute stable critical point (monostable system).
+    """
     xB = 1/(1 + (K_1*v_2*2/(K_2*v_1)))
     xA = xC = (1-xB)/2
     return xA, xB, xC
 
 
 def null_eigenvector_neq():
+    """
+    Compute stable and symmetrical critical points (bistable system).
+    """
     xB = K_2*v_1/(v_2 - v_1)
 
     B = - (v_2 - v_1*(1 + K_2))/(v_2 - v_1)
@@ -103,11 +121,8 @@ def null_eigenvector_neq():
     xA_1 = (-B + math.sqrt(B**2 - 4*C))/(2)
     xA_2 = (-B - math.sqrt(B**2 - 4*C))/(2)
 
-    if (xA_1 < 0) or (xA_1 > 1):
-        print("A problem occured, xA_1: {}".format(xA_1))
-
-    if (xA_2 < 0) or (xA_2 > 1):
-        print("A problem occured, xA_2: {}".format(xA_2))
+    if (xA_1 < 0) or (xA_1 > 1) or (xA_2 < 0) or (xA_2 > 1):
+        raise ValueError('Bistable points are not a density.')
     
     xC_1 = 1 - xA_1 - xB
     xC_2 = 1 - xA_2 - xB
@@ -115,9 +130,39 @@ def null_eigenvector_neq():
     return xA_1, xB, xC_1, xA_2, xC_2
 
 
-xA_star, xB_star, xC_star = null_eigenvector_eq()
-
 #%%
+#---------------- Check critical point -----------------#
+#-------------------------------------------------------#
+
+check_bistability = v2_threshold(K_1,K_2,v_1,v_2)
+
+if check_bistability:
+    if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):        #equations 21.2, 21.3
+        print("The system is bistable")
+        xA1_star, xB_star, xC1_star, xA2_star, xC2_star = null_eigenvector_neq(K_1,K_2,v_1,v_2)
+        stability = 'bistable'
+        if peak == 'A':
+            crit_ns = fsolve(null_eigenvector_ns, [1.,0.,0.])
+            xA_star = xA1_star
+            xC_star = xC1_star
+        elif peak == 'C':
+            crit_ns = fsolve(null_eigenvector_ns, [0.,0.,1.])
+            xA_star = xA2_star
+            xC_star = xC2_star
+else:
+    print("The system is bistable")
+    stability = 'monostable'
+    crit_ns = fsolve(null_eigenvector_ns, [0.,1.,0.])
+    xA_star, xB_star, xC_star = null_eigenvector_eq(K_1,K_2,v_1,v_2)
+    
+crit_ns = fsolve(null_eigenvector_ns, [0, 1, 0])
+xA_star, xB_star, xC_star = null_eigenvector_eq()
+print("\nAnalytical critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(xA_star,xB_star,xC_star))
+print("\nNumerical critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(crit_ns[0],crit_ns[1],crit_ns[2]))
+
+if np.allclose(crit_ns, [xA_star, xB_star, xC_star]):
+    print("\nThe analytic solution is close to the numerical one.")
+
 print("The critical point is:\t ({:.3f}, {:.3f}, {:.3f})".format(xA_star,xB_star,xC_star))
 if np.allclose(crit_ns, [xA_star, xB_star, xC_star]):
     print("The analytic solution is close to the numerical one.")
@@ -149,6 +194,7 @@ pi_BC_der_C = -((K_2**2)*v_1)/(den_C**2)
 pi_AC_der_A = pi_AC_der_B = pi_AC_der_C = 0.
 
 pi_CA_der_A = pi_CA_der_B = pi_CA_der_C = 0.
+
 
 #%%
 #------------ Elements of L and L_bar --------------#
@@ -251,14 +297,8 @@ Z = np.abs(solution())
 #--------------- Save pic and file -----------------#
 #---------------------------------------------------#
 
-namefile = str(N)
-if K_2 < K_1:
-    namefile = 'LNA_results/bistable/' + namefile
-    namefile += '_bistable'
-else:
-    namefile = 'LNA_results/monostable/' + namefile
-    namefile += '_monostable'
-#np.savetxt(namefile+'.txt', Z)
+namefile = 'LNA_results/{}/{}_{}_LNA_v2_{:.2f}'.format(stability,N,stability,v_2)
+np.savetxt(namefile+'.txt', Z)
 
 #%%
 #------------------ Visualization ------------------#

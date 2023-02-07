@@ -1,6 +1,7 @@
 bistable/**
 monostable/**
 LNA_results/**
+methods/*
 
 *.png
 *.zip

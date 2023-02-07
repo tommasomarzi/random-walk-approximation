@@ -6,34 +6,38 @@ from scipy.integrate import RK45
 from tqdm import tqdm
 from tqdm.contrib.itertools import product
 import os
-#os.chdir("/home/PERSONALE/stefano.polizzi/spolizzi/laplacian graph theory")
-#os.chdir("/home/PERSONALE/stefano.polizzi")
-#path = os.path.abspath(os.getcwd()) # %pwd
 from time import sleep
 import itertools
 
+
 # %%
+#----------------- Global parameters ---------------#
+#---------------------------------------------------#
 
 K_1 = K_4 = 0.1
 K_2 = K_3 = 1.
 v_1 = v_4 = 1.
-v_2_range = np.linspace(1.5,3.52,26) # for server bio07 to reduce time
-#np.linspace(1.5,3.52,51)
-#np.linspace(1.62,3.52,51)  #after server interruption
+v_2_range = np.linspace(1.5,3.52,26) 
 N_min = 5
-N_max = 295 #205 for server
+N_max = 295 
 N_step = 10
 N_range = np.arange(N_min, N_max+1, N_step)
 N_range = [100]
 v_2_range = [1.8, 2.48,3.04]
 
+# RK parameters
 t_max = 3000
-i_osc = 30 #period over which we test the error
-error_shift = 150           #delay
-error_offset = 2.2e-9        #difference
+i_osc = 30                  # period over which we test the error
+error_shift = 150           # delay
+error_offset = 2.2e-9       # difference
 
 fiedler_list = []
 
+
+# %%
+#----------------- Transition rates ----------------#
+#---------------------------------------------------#
+"""   Functions for the rates of the dual PdPc.    """   
 
 def pi_AA(xA,xB,xC, k1, k2, v1, v2):
     AA = 0.
@@ -72,13 +76,17 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
     return CC
 
 
-def return_rate(i,j,k,l,N):
+# %%
+#-------------- Generalized Laplacian --------------#
+#---------------------------------------------------#
 
+def return_rate(i,j,k,l,N):
+    """ 
+    Given indexes of the matrix, compute associated rate for the generalized Laplacian.
+    """   
     a1 = i-j
     a3 = k-l
     a2 = -(a1+a3)
-
-    assert((a1+a2+a3) == 0)
 
     BA = pi_BA(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
     CA = pi_CA(j/N, 1-(j/N + l/N), l/N, K_1, K_2, v_1, v_2)
@@ -122,7 +130,29 @@ def return_rate(i,j,k,l,N):
     return g
 
 
+def allowed_configurations(N):
+    """
+    Build allowed configurations.
+    Returns
+    -------
+        occupation: vector with 1 if the configuration is allowed, 0 otherwise
+        occupation_states: list of allowed couples
+    """
+    dim = list(np.arange((N+1)))
+    occupation = np.zeros(((N+1)**2))
+    occupation_states = []
+    for i,j in itertools.product(dim, dim):
+        if (i+j <= N):
+            occupation[i*(N+1)+j] = 1.
+            occupation_states.append((i,j))
+
+    return occupation, occupation_states
+
+
 def custom_sum(i, N):
+    """
+    Custom sum for indexes iteration in filtered Laplacian.
+    """
     if i == 0:
         res = 0
     else:
@@ -130,19 +160,11 @@ def custom_sum(i, N):
     return res
 
 
-def build_occ(N):
-    dim = list(np.arange((N+1)))
-    occupation = np.zeros(((N+1)**2))
-    occ_states = []
-    for i,j in itertools.product(dim, dim):
-        if (i+j <= N):
-            occupation[i*(N+1)+j] = 1.
-            occ_states.append((i,j))
-
-    return occupation, occ_states
-
-
 def build_G_filtered(occupation_states, N):
+    """
+    Build generalized Laplacian filtered with the allowed configurations.
+    The filtering strongly reduces the dimensionality of the matrix.
+    """
     filtered_dim = len(occupation_states)
 
     G = np.zeros((filtered_dim,filtered_dim))
@@ -162,6 +184,10 @@ def build_G_filtered(occupation_states, N):
 
 
 def build_G(N):
+    """
+    Build generalized Laplacian.
+    !DEPRECATED METHOD
+    """
     G = np.zeros((((N+1)**2),((N+1)**2)))
 
     dim_1 = list(np.arange((N+1)**2))
@@ -229,27 +255,50 @@ def build_G(N):
     return G, occ
 
 
+# %%
+#--------------------- Utils -----------------------#
+#---------------------------------------------------#
+
 def get_fiedler(matrix):
+    """
+    Get fiedler eigenvalue for given matrix.
+    """
     eigvals, _ = LA.eig(matrix)
     fielder = np.sort(eigvals)[-2]
     return fielder
 
 
 def get_eigvals(matrix):
+    """
+    Get spectrum for given matrix.
+    """
     eigvals, _ = LA.eig(matrix)
     return eigvals
 
 
 def P_dot(t,P):
+    """
+    Define positive autonomous linear system to be solved with RK.
+    Reference to equation A3
+    """
     return np.matmul(G, P)
 
 def error_L1(p_curr, p_prev, N):
+    """
+    L1 norm
+    """
     return np.sum(np.abs(p_curr-p_prev))
 
 def error_L2(p_curr, p_prev, N):
+    """
+    L2 norm
+    """
     return np.sqrt(np.sum((p_curr-p_prev)**2))
 
+
 #%%
+#--------------- Spectral analysis -----------------#
+#---------------------------------------------------#
 
 eigvals_list = []
 
@@ -257,12 +306,16 @@ for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
 
-        vec, states = build_occ(N)
+        vec, states = allowed_configurations(N)
         G = build_G_filtered(states,N)
         eigv = get_eigvals(G)
         eigvals_list.append(eigv)
 
+
 #%%
+#---------------- Run RK algorithm -----------------#
+#---------------------------------------------------#
+
 L1_values = []
 L2_values = []
 
@@ -270,7 +323,7 @@ for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
 
-        vec, states = build_occ(N)
+        vec, states = allowed_configurations(N)
         G = build_G_filtered(states,N)
         P_0 = np.ones(len(states))
         P_0 = P_0/np.sum(P_0)
@@ -325,6 +378,8 @@ for v_2 in v_2_range:
 
 
 # %%
+#------------- Convergence analysis ----------------#
+#---------------------------------------------------#
 
 cutoff = [2,800]
 fig, ax = plt.subplots()
@@ -339,5 +394,3 @@ ax.legend()
 fig.tight_layout()
 fig.savefig("convergence.png", dpi=300, facecolor='white', transparent=False)
 #fig.show()
-
-# %%

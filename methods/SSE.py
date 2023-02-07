@@ -28,6 +28,9 @@ stability = None
 #---------------------------------------------------#
 
 def v2_threshold(k1,k2,v1,v2):
+    """
+    Compute condition for bistability (eq. (21.1)).
+    """
     lhs = v2 - v1*(1+k2)
     rhs = 2*k1*v2
     if lhs >= rhs or lhs <= -rhs:
@@ -37,7 +40,8 @@ def v2_threshold(k1,k2,v1,v2):
 
 
 #----------------- Transition rates ----------------#
-#---------------------------------------------------#   
+#---------------------------------------------------#
+"""   Functions for the rates of the dual PdPc.    """   
 
 def pi_AA(xA,xB,xC, k1, k2, v1, v2):
     AA = 0.
@@ -80,6 +84,9 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
 #---------------------------------------------------#   
 
 def null_eigenvector_eq(k1,k2,v1,v2):
+    """
+    Compute stable critical point (monostable system).
+    """
     xB = 1/(1 + (k1*v2*2/(k2*v1)))
     xA = xC = (1-xB)/2
 
@@ -87,6 +94,9 @@ def null_eigenvector_eq(k1,k2,v1,v2):
 
 
 def null_eigenvector_neq(k1,k2,v1,v2):
+    """
+    Compute stable and symmetrical critical points (bistable system).
+    """
     xB = k2*v1/(v2 - v1)
 
     B = - (v2 - v1*(1 + k2))/(v2 - v1)
@@ -96,12 +106,9 @@ def null_eigenvector_neq(k1,k2,v1,v2):
     xA_1 = (-B + math.sqrt(B**2 - 4*C))/(2)
     xA_2 = (-B - math.sqrt(B**2 - 4*C))/(2)
 
-    if (xA_1 < 0) or (xA_1 > 1):
-        print("A problem occured, xA_1: {}".format(xA_1))
+    if (xA_1 < 0) or (xA_1 > 1) or (xA_2 < 0) or (xA_2 > 1):
+        raise ValueError('Bistable points are not a density.')
 
-    if (xA_2 < 0) or (xA_2 > 1):
-        print("A problem occured, xA_2: {}".format(xA_2))
-    
     xC_1 = 1 - xA_1 - xB
     xC_2 = 1 - xA_2 - xB
     
@@ -136,8 +143,8 @@ for v_2 in v_2_values:
                         x + y + z - 1]
 
             if check_bistability:
-                print("Bistable system")
-                if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):
+                if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):    #equations 21.2, 21.3
+                    print("The system is bistable")
                     xA1_star, xB_star, xC1_star, xA2_star, xC2_star = null_eigenvector_neq(K_1,K_2,v_1,v_2)
                     stability = 'bistable'
                     if peak == 'A':
@@ -149,7 +156,7 @@ for v_2 in v_2_values:
                         xA_star = xA2_star
                         xC_star = xC2_star
             else:
-                print("Monostable system")
+                print("The system is monostable")
                 stability = 'monostable'
                 crit_ns = fsolve(null_eigenvector_ns, [0.,1.,0.])
                 xA_star, xB_star, xC_star = null_eigenvector_eq(K_1,K_2,v_1,v_2)
@@ -298,24 +305,12 @@ for v_2 in v_2_values:
 
         #------------------ Visualization ------------------#
         #---------------------------------------------------#
-        if False:
-            low_xA = int(N*xA_star)-50
-            if low_xA < 0:
-                low_xA = 0
-            high_xA = int(N*xA_star)+51
-            if high_xA > N:
-                high_xA = N
-            low_xB = int(N*xB_star)-50
-            if low_xB < 0:
-                low_xB = 0
-            high_xB = int(N*xB_star)+51
-            if high_xB > N:
-                high_xB = N
-        else:
-            low_xA = 0
-            high_xA = N
-            low_xB = 0
-            high_xB = N
+        
+        low_xA = 0
+        high_xA = N
+        low_xB = 0
+        high_xB = N
+        
         fig = plt.figure(figsize=(8,6))
         plt.imshow(Z_norm,origin='lower',interpolation='nearest')
         plt.colorbar()
