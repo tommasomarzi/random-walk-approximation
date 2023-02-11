@@ -1,43 +1,26 @@
-# %%
 import matplotlib
-%matplotlib qt5
 import matplotlib.pyplot as plt
-plt.plot()
-plt.close()
 import numpy as np
 from matplotlib import rc
 import os
 import fnmatch
-from math import factorial  # for multinomial distribution
-from mpl_toolkits import mplot3d  # for 3D plotd
-rc('text', usetex=True)
+from math import factorial          
+from mpl_toolkits import mplot3d    
 from pathlib import Path
-from math import log #for log of integer(when numbers are too big for the multinomial)
+from math import log               
 from collections import Counter
-os.chdir("C:\\Users\\stefano.polizzi\\OneDrive - \
-Alma Mater Studiorum Università di Bologna\\back_up\\Post-doc Bologna\progetto laplacian graph theory")
-#os.chdir('D:\spoli\Documents\seagate\Post-doc Bologna\progetto laplacian graph theory')
-path = %pwd
 
-%matplotlib
-# %%
-
-########---------- LOOP for txt files with the distribution and the color plots  -------------##########
-########---------- for constant rates
-########################################################################################################
-
-
-
+rc('text', usetex=True)
 
 def null_eigenvector_k(k_1, k_2, v_1, v_2 , N):  
-    '''
+    """
     Parameters:
-                k_1, k_2 are the rates of the reactions
-                v_1, v_2 are the velocities of the reactions
-                N is the number of particles
+        k_1, k_2: rates of the reactions
+        v_1, v_2: velocities of the reactions
+        N: number of particles
     Returns:
-                analytical stationary solution of the system of ODEs (x^* in the paper)
-    '''
+        analytical stationary solution of the system of ODEs (x^* in the paper)
+    """
     xA = xC = 0.5*(1-v_1*k_2/(2*v_2*k_1 + v_1*k_2))
     xB = v_1*k_2/(2*v_2*k_1 + v_1*k_2)
     xB_temp = - k_1*k_2**2*v_1/(k_1*k_2*v_1 - v_2*k_1*k_2)
@@ -53,32 +36,30 @@ def null_eigenvector_k(k_1, k_2, v_1, v_2 , N):
         return [(xA, xB, xC),(xC, xB, xA)]
     else:
         return xA, xB, xC
-# %%
-
+        
 
 def mult_const(x, y, p_A, p_B, p_C, N):
-    '''
-    Function returnig  the log of the multinomial distribution 
-    '''
+    """
+    Function returning the log of the multinomial distribution 
+    """
     if x + y > N:
         return -np.inf
     n_c = N-x-y
     return log(factorial(N)/(factorial(x)*factorial(y)*factorial(n_c))) + \
         x*log(p_A) + y*log(p_B) + n_c*log(1-p_A-p_B)
 
-# %%
+
 def save_MUL_const(v_2, folder = "MUL_files_star", k_1 = 0.1, k_2 = 1, v_1 = 1, N_min = 5, N_max = 105, N_step = 10):
     """
     Function that saves the txt and png files of the multinomial (MUL_star) with the correct constant
     analytical parameters for the system of ODE given from the model dual-phosphorylation dephosphorylation
     with parameters k_1, k_2, v_1, v_2 (the control paramter). The default values of the parameters are the ones
-    in the paper
-    Parameters:
-                N_min: lower bound of the number of particles for which we want to compute the MUL_star
-                N_max: upper bound of the number of particles for which we want to compute the MUL_star
-                N_step: step of the number of particles for which we want to compute the MUL_star
-    folder: root folder for the data, inside wich a monostable and bistable directory is created
-    in path (project folder)
+    in the paper.
+    Arguments:
+        N_min: lower bound of the number of particles for which we want to compute the MUL_star
+        N_max: upper bound of the number of particles for which we want to compute the MUL_star
+        N_step: step of the number of particles for which we want to compute the MUL_star
+        folder: root folder for the data, inside wich a monostable and bistable directory is created in path (project folder)
     """
     for N in np.arange(N_min, N_max+1, N_step):
         lnZ = -np.ones((N+1, N+1))*np.inf
@@ -122,7 +103,7 @@ def save_MUL_const(v_2, folder = "MUL_files_star", k_1 = 0.1, k_2 = 1, v_1 = 1, 
         plt.tight_layout()
         plt.savefig(namefile + '_star.png', dpi=300, facecolor='white', transparent=False)
         plt.close()
-# %%
+        
 # Example of use
 save_MUL_const(v_2 = 3.04, folder = "MUL_files_star", k_1 = 0.1, k_2 = 1,
                 v_1 = 1, N_min = 105, N_max = 495, N_step = 10)

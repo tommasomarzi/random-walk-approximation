@@ -1,37 +1,26 @@
-
-# %%
-# for log of integer(when numbers are too big for the multinomial)
 from math import log
 from collections import Counter
 from pathlib import Path
-from mpl_toolkits import mplot3d  # for 3D plotd
-from math import factorial  # for multinomial distribution
+from mpl_toolkits import mplot3d  
+from math import factorial  
 import fnmatch
 import os
 from matplotlib import rc
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-%matplotlib qt5
-plt.plot()
-plt.close()
-rc('text', usetex=True)
-os.chdir("C:\\Users\\stefano.polizzi\\OneDrive - \
-Alma Mater Studiorum Università di Bologna\\back_up\\Post-doc Bologna\progetto laplacian graph theory")
-# os.chdir('D:\spoli\Documents\seagate\Post-doc Bologna\progetto laplacian graph theory')
-path = %pwd
 
-%matplotlib
+rc('text', usetex=True)
 
 
 def p_A_n(x, y, z, N, v_1=1, v_4=1):
-    '''
-    Parameters:
-                x, y and z are the number of the particles in each state
-                N is the total number of particles
+    """
+    Arguments:
+        x, y, z:number of the particles in each state
+        N: total number of particles
     Returns:
-                probability for one particle of being in state A, i.e. p_A_n is an eigenvector with 0 eigenvalue of the Laplacian matrix
-    '''
+        probability for one particle of being in state A, i.e. p_A_n is an eigenvector with 0 eigenvalue of the Laplacian matrix
+    """
     pi_AA = 0  # 1 - k_2*x/(k_1*k_2 + k_1*y + k_2*x)
     pi_AB = v_2*k_1/(k_1*k_2 + k_1*y/N + k_2*z/N)
     pi_AC = 0  # k*(N - n_A - n_B)/N
@@ -49,13 +38,13 @@ def p_A_n(x, y, z, N, v_1=1, v_4=1):
 
 
 def p_B_n(x, y, z, N, v_1=1, v_4=1):
-    '''
-    Parameters:
-                x, y and z are the number of the particles in each state
-                N is the total number of particles
+    """
+    Arguments:
+        x, y, z:number of the particles in each state
+        N: total number of particles
     Returns:
-                probability for one particle of being in state B, i.e. p_B_n is an eigenvector with 0 eigenvalue of the Laplacian matrix
-    '''
+        probability for one particle of being in state B, i.e. p_B_n is an eigenvector with 0 eigenvalue of the Laplacian matrix
+    """
     pi_AA = 0  # 1 - k_2*x/(k_1*k_2 + k_1*y + k_2*x)
     pi_AB = v_2*k_1/(k_1*k_2 + k_1*y/N + k_2*z/N)
     pi_AC = 0  # k*(N - n_A - n_B)/N
@@ -73,13 +62,13 @@ def p_B_n(x, y, z, N, v_1=1, v_4=1):
 
 
 def p_C_n(x, y, z, N, v_1=1, v_4=1):
-    '''
-    Parameters:
-                x, y and z are the number of the particles in each state
-                N is the total number of particles
+    """
+    Arguments:
+        x, y, z:number of the particles in each state
+        N: total number of particles
     Returns:
-                probability for one particle of being in state B, i.e. p_B_n is an eigenvector with 0 eigenvalue of the Laplacian matrix
-    '''
+        probability for one particle of being in state C, i.e. p_C_n is an eigenvector with 0 eigenvalue of the Laplacian matrix
+    """
     pi_AA = 0  # 1 - k_2*x/(k_1*k_2 + k_1*y + k_2*x)
     pi_AB = v_2*k_1/(k_1*k_2*N + k_1*y + k_2*z)
     pi_AC = 0  # k*(N - n_A - n_B)/N
@@ -107,15 +96,14 @@ def mult(x, z, N):
 
 def RWA(N_min, N_max, N_step, v_2_min=1.5, v_2_max=2.49, v_2_length=100, k_1=0.1,
         k_2=1):
-    '''
-    Parameters:
-                v_1, v_2, v_3 and v_4 are the rates of the transitions between the states
-                N_min, N_max and N_step are the parameters for the number of particles in the system
+    """
+    Arguments:
+        v_1, v_2, v_3, v_4: rates of the transitions between the states
+        N_min, N_max, N_step: parameters for the number of particles in the system
     Returns:
-                It saves the text files with the values of the probabilities for each possible state of the system
-                along with the png files with the color images of the probabilities $\rho$
-
-    '''
+        It saves the text files with the values of the probabilities for each possible state of the system
+        along with the png files with the color images of the probabilities $\rho$
+    """
     for v_2 in (np.around(np.linspace(v_2_min,v_2_max,v_2_length),2)):  #put rounding for file names
         v_3 = v_2
         v_2_s = "{:0.2f}".format(v_2)
@@ -144,4 +132,3 @@ def RWA(N_min, N_max, N_step, v_2_min=1.5, v_2_max=2.49, v_2_length=100, k_1=0.1
             plt.tight_layout()
             plt.savefig(namefile + '.png', dpi=300, facecolor='white', transparent=False)
             plt.close()
-# %%

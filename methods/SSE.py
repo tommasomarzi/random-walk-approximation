@@ -29,7 +29,7 @@ stability = None
 
 def v2_threshold(k1,k2,v1,v2):
     """
-    Compute condition for bistability (eq. (21.1)).
+    Compute condition for bistability (equation 23.1).
     """
     lhs = v2 - v1*(1+k2)
     rhs = 2*k1*v2
@@ -85,7 +85,7 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
 
 def null_eigenvector_eq(k1,k2,v1,v2):
     """
-    Compute stable critical point (monostable system).
+    Compute stable critical point (monostable system) in equation 22.
     """
     xB = 1/(1 + (k1*v2*2/(k2*v1)))
     xA = xC = (1-xB)/2
@@ -95,7 +95,7 @@ def null_eigenvector_eq(k1,k2,v1,v2):
 
 def null_eigenvector_neq(k1,k2,v1,v2):
     """
-    Compute stable and symmetrical critical points (bistable system).
+    Compute stable and symmetrical critical points (bistable system) in equations 24, 25.
     """
     xB = k2*v1/(v2 - v1)
 
@@ -117,6 +117,7 @@ def null_eigenvector_neq(k1,k2,v1,v2):
 
 #---------------------- Cycles  --------------------#
 #---------------------------------------------------#
+
 for v_2 in v_2_values:
     
     v_3 = v_2
@@ -143,7 +144,7 @@ for v_2 in v_2_values:
                         x + y + z - 1]
 
             if check_bistability:
-                if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):    #equations 21.2, 21.3
+                if ((v_2 > v_1) and (v_2 >= (v_1*(K_2+1)))):    #equations 23.2, 23.3
                     print("The system is bistable")
                     xA1_star, xB_star, xC1_star, xA2_star, xC2_star = null_eigenvector_neq(K_1,K_2,v_1,v_2)
                     stability = 'bistable'
@@ -295,14 +296,6 @@ for v_2 in v_2_values:
 
         Z_norm = Z.T/Z.sum()
 
-
-        #--------------- Save pic and file -----------------#
-        #---------------------------------------------------#   
-
-        namefile = 'LNA_results/{}/{}_{}_LNA_v2_{:.2f}'.format(stability,N,stability,v_2)
-        np.savetxt(namefile+'.txt', Z_norm)
-
-
         #------------------ Visualization ------------------#
         #---------------------------------------------------#
         
@@ -324,7 +317,7 @@ for v_2 in v_2_values:
         plt.xlabel("$n_A$",size=14)
         plt.ylabel("$n_C$",size=14)
         plt.tight_layout()
-        plt.savefig(namefile+'.png', dpi=300, facecolor='white', transparent=False)
+        plt.show()
         plt.close()
 
         print(20*"-")

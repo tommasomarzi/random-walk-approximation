@@ -1,4 +1,3 @@
-# %%
 import numpy as np
 import numpy.linalg as LA
 from matplotlib import pyplot as plt
@@ -10,7 +9,6 @@ from time import sleep
 import itertools
 
 
-# %%
 #----------------- Global parameters ---------------#
 #---------------------------------------------------#
 
@@ -22,7 +20,6 @@ N_min = 5
 N_max = 295 
 N_step = 10
 N_range = np.arange(N_min, N_max+1, N_step)
-N_range = [100]
 v_2_range = [1.8, 2.48,3.04]
 
 # RK parameters
@@ -34,7 +31,6 @@ error_offset = 2.2e-9       # difference
 fiedler_list = []
 
 
-# %%
 #----------------- Transition rates ----------------#
 #---------------------------------------------------#
 """   Functions for the rates of the dual PdPc.    """   
@@ -76,13 +72,22 @@ def pi_CC(xA,xB,xC, k1, k2, v1, v2):
     return CC
 
 
-# %%
 #-------------- Generalized Laplacian --------------#
 #---------------------------------------------------#
 
 def return_rate(i,j,k,l,N):
     """ 
     Given indexes of the matrix, compute associated rate for the generalized Laplacian.
+    Check reference [26] (https://www.sciencedirect.com/science/article/pii/S0377042715005075?via%3Dihub)
+    for a detailed description of how the matrix is build.
+    Arguments:
+        i: first row index (# of exchanged particles first species)
+        j: first column index (# of particles first species)
+        k: second row index (# of exchanged particles first species)
+        l: second column index (# of particles second species)
+        N: number of species
+    Returns:
+        Corresponding value of the generalized Laplacian.
     """   
     a1 = i-j
     a3 = k-l
@@ -133,8 +138,7 @@ def return_rate(i,j,k,l,N):
 def allowed_configurations(N):
     """
     Build allowed configurations.
-    Returns
-    -------
+    Returns:
         occupation: vector with 1 if the configuration is allowed, 0 otherwise
         occupation_states: list of allowed couples
     """
@@ -151,7 +155,7 @@ def allowed_configurations(N):
 
 def custom_sum(i, N):
     """
-    Custom sum for indexes iteration in filtered Laplacian.
+    Custom sum for indexes iteration in filtered generalized Laplacian.
     """
     if i == 0:
         res = 0
@@ -163,6 +167,8 @@ def custom_sum(i, N):
 def build_G_filtered(occupation_states, N):
     """
     Build generalized Laplacian filtered with the allowed configurations.
+    Check reference [26] (https://www.sciencedirect.com/science/article/pii/S0377042715005075?via%3Dihub)
+    for a detailed description of how the matrix is build.
     The filtering strongly reduces the dimensionality of the matrix.
     """
     filtered_dim = len(occupation_states)
@@ -183,79 +189,6 @@ def build_G_filtered(occupation_states, N):
     return G
 
 
-def build_G(N):
-    """
-    Build generalized Laplacian.
-    !DEPRECATED METHOD
-    """
-    G = np.zeros((((N+1)**2),((N+1)**2)))
-
-    dim_1 = list(np.arange((N+1)**2))
-
-    cnt_1_x = 0
-    cnt_2_x = 0
-
-    do_occupation = True
-    occupation_filled = False
-    disallowed = True
-
-    for i in dim_1:
-        cnt_1_y = 0
-        cnt_2_y = 0
-
-        occupation = np.zeros(((N+1)**2))
-
-        for j in dim_1:
-
-            alpha_1 = cnt_1_x - cnt_1_y
-            alpha_2 = cnt_2_x - cnt_2_y
-            alpha_3 = - (alpha_1 + alpha_2)
-
-            if ((cnt_1_y + cnt_2_y) > N):
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-                continue
-
-            occupation[j] = 1.
-
-            if ((alpha_2 < -1) or (alpha_2 > 1)):
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-                continue
-
-            if ((alpha_1 < -1) or (alpha_1 > 1)):
-                cnt_2_y += 1
-                if (cnt_2_y == (N+1)):
-                    cnt_2_y = 0
-                    cnt_1_y += 1
-                continue
-
-            G[i,j] = return_rate(cnt_1_x, cnt_1_y, cnt_2_x, cnt_2_y, N)
-
-            cnt_2_y += 1
-            if (cnt_2_y == (N+1)):
-                cnt_2_y = 0
-                cnt_1_y += 1
-
-        if do_occupation:
-            if not occupation_filled:
-                if np.all(G[i] == 0):
-                    occupation_filled = True
-                    idx = i.copy()
-                    occ = occupation.copy()
-
-        cnt_2_x += 1
-        if (cnt_2_x == (N+1)):
-            cnt_2_x = 0
-            cnt_1_x += 1
-    return G, occ
-
-
-# %%
 #--------------------- Utils -----------------------#
 #---------------------------------------------------#
 
@@ -264,7 +197,7 @@ def get_fiedler(matrix):
     Get fiedler eigenvalue for given matrix.
     """
     eigvals, _ = LA.eig(matrix)
-    fielder = np.sort(eigvals)[-2]
+    fielder = np.sort(np.abs(eigvals))[1]
     return fielder
 
 
@@ -296,7 +229,6 @@ def error_L2(p_curr, p_prev, N):
     return np.sqrt(np.sum((p_curr-p_prev)**2))
 
 
-#%%
 #--------------- Spectral analysis -----------------#
 #---------------------------------------------------#
 
@@ -305,14 +237,12 @@ eigvals_list = []
 for v_2 in v_2_range:
     for N in N_range:
         v_3 = v_2
-
         vec, states = allowed_configurations(N)
         G = build_G_filtered(states,N)
         eigv = get_eigvals(G)
         eigvals_list.append(eigv)
 
 
-#%%
 #---------------- Run RK algorithm -----------------#
 #---------------------------------------------------#
 
@@ -356,15 +286,6 @@ for v_2 in v_2_range:
         solution = np.zeros(vec.shape)
         solution[vec == 1] = P_values[-1]/(np.sum(P_values[-1]))
         solution = solution.reshape((N+1,N+1))
-        #folder = os.path.join(path,"RKI_results")
-        #namefile = os.path.join(folder,"monostable", \
-        #            "{}_monostable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
-        #            else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}.txt".format(N, f"{v_2:.2f}"))
-        #namefile_G = os.path.join(folder,"monostable", \
-        #            "{}_monostable_RKI_v2_{}_Fiedler.txt".format(N, f"{v_2:.2f}")) if v_2 < 2.5 \
-        #            else os.path.join(folder, "bistable","{}_bistable_RKI_v2_{}_Fiedler.txt".format(N, f"{v_2:.2f}"))
-        #np.savetxt(namefile, solution)
-        #np.savetxt(namefile_G,np.array([f]))
         fig = plt.figure(figsize=(8,6))
         plt.imshow(solution,origin='lower',interpolation='nearest')
         plt.colorbar()
@@ -377,7 +298,6 @@ for v_2 in v_2_range:
         L2_values.append(error_values_L2)
 
 
-# %%
 #------------- Convergence analysis ----------------#
 #---------------------------------------------------#
 
@@ -392,5 +312,4 @@ ax.set_yscale('log')
 ax.set_ylim([1e-4,1e-1])
 ax.legend()
 fig.tight_layout()
-fig.savefig("convergence.png", dpi=300, facecolor='white', transparent=False)
-#fig.show()
+fig.show()
