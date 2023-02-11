@@ -1,17 +1,11 @@
-# use kernel of server bio14 names kernel_py or env_D
-
-# %%
 import matplotlib
-%matplotlib qt5
 import matplotlib.pyplot as plt
-plt.plot()
-plt.close()
 import string
 import numpy as np
 from matplotlib import rc
 import seaborn as sns
 import os
-import cv2 #resize images
+import cv2 
 from scipy.interpolate import interp2d
 from scipy.special import kl_div
 from scipy.spatial.distance import squareform, pdist, jensenshannon # for Wasserstein distance
@@ -19,21 +13,18 @@ from scipy.optimize import linprog  # for Wasserstein distance
 from math import factorial  # for multinomial distribution
 from mpl_toolkits import mplot3d  # for 3D plotd
 from itertools import cycle
+
 rc('text', usetex=True)
-path = %pwd
-
-%matplotlib
-# %%
 
 
-def error_compute_plot(N_min=5,  N_max=295, N_step=10, k_1=0.1, k_2=1):
-    '''
-    Compute the errors between the different methods and plot them,
-    saving the figure png file.
-    Parameters:
-    N_min, N_max, N_step: range of N to compute the errors
-    k_1, k_2: parameters of the model    
-    '''
+def error_compute_plot(N_min=5,  N_max=295, N_step=10, k_1=0.1, k_2=1, path = ""):
+    """
+    Compute the errors between the different methods, plot them and save the figure.
+    Arguments:
+        N_min, N_max, N_step: range of N to compute the errors
+        k_1, k_2: parameters of the model    
+        path: folder path
+    """
     j = 0
     error_L1_MUL = np.zeros(len(np.arange(N_min, N_max+1, N_step)))
     error_L2_MUL = np.zeros(len(np.arange(N_min, N_max+1, N_step)))
@@ -131,5 +122,3 @@ def error_compute_plot(N_min=5,  N_max=295, N_step=10, k_1=0.1, k_2=1):
         fig.tight_layout()
         plt.subplots_adjust(wspace=0.119)
     plt.savefig("Errors_figure_paper.png", dpi=300)
-
-
