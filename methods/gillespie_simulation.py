@@ -1,5 +1,3 @@
-# %% codecell
-# use kernel in bio14 kernel_py (for the loop) or env_D if in local machine
 # %% markdown
 # # Stochastic Simulation Algorithm - Gillespie (-Doob)
 #
@@ -58,57 +56,7 @@
 # In python it is represented with a class **State**, containing all the necessary information about the state of the system:
 # the current number of molecules in each state (**A** and **B**), the sojourn time untill next reaction (**dt**) and the global time from the beginning **t**.
 # %% codecell
-from collections import namedtuple
-import numpy as np
-import os
-import matplotlib
-#%matplotlib qt5
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import step as step_plot
-from collections import Counter
-from numpy.random import exponential as rand_exp
-from scipy.stats import dirichlet
-path = %pwd
-# %%
 
-class State(namedtuple('State',["A", "B", "C", "dt", "t"])):
-
-    def __add__(self, s2):
-        """adding the states"""
-        return State(self.A+s2.A,
-                     self.B+s2.B,
-                     self.C+s2.C,
-                     self.dt+s2.dt,
-                     self.t+s2.t)
-
-    def pi_BA(self, K_1, K_2):
-        """Transition rate from A to B"""
-        return K_2*self.A/(K_1*K_2 + K_1*self.B + K_2*self.A)
-
-    def pi_AB(self,K_1, K_2):
-        """Transition rate from B to A"""
-        return self.B*K_1/(K_1*K_2 + K_1*self.B + K_2*self.C)
-
-    def pi_CB(self,K_1, K_2):
-        """Transition rate from B to C"""
-        return self.B*K_1/(K_1*K_2 + K_1*self.B + K_2*self.A)
-
-    def pi_BC(self,K_1, K_2):
-        """Transition rate from C to B"""
-        return K_2*self.C/(K_1*K_2 + K_2*self.C + K_1*self.B)
-
-    def pi_AA(self,K_1, K_2):
-        """Transition rate from A to A"""
-        return 1 - K_2*self.A/(K_1*K_2 + K_1*self.B + K_2*self.A)
-
-    def pi_BB(self, K_1, K_2):
-        """Transition rate from B to B"""
-        return 1 - self.B*K_1/(K_1*K_2 + K_1*self.B + K_2*self.C) +\
-        - self.B*K_1/(K_1*K_2 + K_1*self.B + K_2*self.A)
-
-    def pi_CC(self, K_1, K_2):
-        """Transition rate from C to C"""
-        return 1 - K_2*self.C/(K_1*K_2 + K_2*self.C + K_1*self.B)
 
 # %% markdown
 ## State_c class
@@ -117,7 +65,7 @@ class State(namedtuple('State',["A", "B", "C", "dt", "t"])):
 # and the bifurcation point should not depend on $N$ anymore.
 # %%
 
-class State_c(namedtuple('State',["A", "B", "C", "dt", "t"])):
+class State(namedtuple('State',["A", "B", "C", "dt", "t"])):
 
     def __add__(self, s2):
         """adding the states"""
@@ -208,257 +156,6 @@ def run(old_s,t_end):
         yield old_s
         old_s = new_s
 
-# %% codecell
-# %% markdown
-# ### Loop for different $N$ and different $K_2$ values, here $K_2 = 0.5$ for bistable and 50 for monostable
-# %% codecell
-
-t_term = 1000
-t_max = 50000.
-N_min = 5
-N_max = 105
-N_step = 10
-K_1 = 3
-K_2 = 50
-#N = 30
-for K_2 in [0.5,50]:
-    k_R1 = lambda s: s.A*s.pi_BA(K_1, K_2)  
-    k_R2 = lambda s: s.B*s.pi_AB(K_1, K_2) 
-    k_R3 = lambda s: s.B*s.pi_CB(K_1, K_2) 
-    k_R4 = lambda s: s.C*s.pi_BC(K_1, K_2)  
-    kinetics = [k_R1, k_R2, k_R3, k_R4]
-    modific = [mod_R1, mod_R2, mod_R3, mod_R4]
-    for N in np.arange(N_min, N_max+1, N_step):
-        current = State(N, 0, 0, 0, 0)
-        steps = [i for i in run(current, t_max)]
-        A, B, C, delta_t, time = zip(*steps)
-        p_AB = np.zeros((N+1, N+1))
-        p_AB_t = np.zeros((N+1, N+1))
-        distributionA = Counter()
-        distribution_times = Counter()
-        for A, B, C, dt, t in ((A, B, C, dt, t) for A, B, C, dt, t in steps if t > t_term):
-            distributionA[(A, B)] += 1
-            distribution_times[(A, B)]+=dt
-        for (A, B), val in distributionA.items():
-            p_AB[A, B] = val
-        for (A, B), val in distribution_times.items():
-            p_AB_t[A, B] = val
-        p_AB_t = p_AB_t/np.sum(p_AB_t)
-        p_AB = p_AB/np.sum(p_AB)
-        namefile = os.path.join(path, "bistable",  str(N) + "_bistable_GIL") if K_2 == \
-                   0.5 else os.path.join(path, "monostable",  str(N) + "_monostable_GIL")
-        np.savetxt(namefile + ".txt", p_AB.transpose())  #const for constant rates _b for comparison with a second identical Gillespie
-        np.savetxt(namefile + "_time.txt", p_AB_t.transpose())
-        nA_star, nB_star = np.where(p_AB == np.max(p_AB))
-        low_nA = int(nA_star)-50
-        if low_nA < 0:
-            low_nA = 0
-        high_nA = int(nA_star)+51
-        if high_nA > N:
-            high_nA = N
-        low_nB = int(nB_star)-50
-        if low_nB < 0:
-            low_nB = 0
-        high_nB = int(nB_star)+51
-        if high_nB > N:
-            high_nB = N
-
-        fig = plt.figure(figsize=(8, 6))
-        plt.imshow(p_AB.transpose(), origin='lower', interpolation='nearest')
-        plt.colorbar()
-        if K_2 > 5:
-            plt.title(u"Monostable with $K_2 = {}$ and $N = {}$".format(K_2,N))
-        else:
-            plt.title(u"Bistable with $K_2 = {}$ and $N = {}$".format(K_2,N))
-        plt.xlim(low_nA, high_nA)
-        plt.ylim(low_nB, high_nB)
-        plt.xlabel("$n_A$", size=14)
-        plt.ylabel("$n_B$", size=14)
-        plt.tight_layout()
-        plt.savefig(namefile + '.png', dpi=300, facecolor='white', transparent=False)
-        plt.close()
-
-
-len(time)
-
-
-# %% codecell
-# %% markdown
-# ### Loop for different $N$ and different $K_1$ values
-# here $K_1 = 0.05$ for bistable and 0.001 for monostable, while $K_2 = 0.01$
-# %% codecell
-
-t_term = 2000
-t_max = 50000.
-N_min = 5
-N_max = 105
-N_step = 10
-K_2 = 0.01
-for K_1 in [0.001,0.05]:
-    k_R1 = lambda s: s.A*s.pi_BA(K_1, K_2)  # 0.7701385301491462/0.04761895071438601 # s.pi_BA(3,50)
-    k_R2 = lambda s: s.B*s.pi_AB(K_1, K_2)  # 1. # s.pi_AB(3,50)
-    k_R3 = lambda s: s.B*s.pi_CB(K_1, K_2)  # 0.0993366519133343/(0.7701385301491462/0.04761895071438601) # s.pi_CB(3,50)
-    k_R4 = lambda s: s.C*s.pi_BC(K_1, K_2)  # s.pi_BC(3,50) # 0.04761895071438601
-    kinetics = [k_R1, k_R2, k_R3, k_R4]
-    modific = [mod_R1, mod_R2, mod_R3, mod_R4]
-    for N in np.arange(N_min, N_max+1, N_step):
-        current = State(N, 0, 0, 0, 0)
-        steps = [i for i in run(current, t_max)]
-        A, B, C, delta_t, time = zip(*steps)
-        p_AB = np.zeros((N+1, N+1))
-        p_AB_t = np.zeros((N+1, N+1))
-        distributionA = Counter()
-        distribution_times = Counter()
-        for A, B, C, dt, t in ((A, B, C, dt, t) for A, B, C, dt, t in steps if t > t_term):
-            distributionA[(A, B)] += 1
-            distribution_times[(A, B)]+=dt
-        for (A, B), val in distributionA.items():
-            p_AB[A, B] = val
-        for (A, B), val in distribution_times.items():
-            p_AB_t[A, B] = val
-        p_AB_t = p_AB_t/np.sum(p_AB_t)
-        p_AB = p_AB/np.sum(p_AB)
-        # X, Y = np.meshgrid(np.arange(np.shape(p_AB)[0]), np.arange(np.shape(p_AB)[1]), indexing='ij')
-        namefile = "bistable/" + str(N) + "_bistable_GIL" if K_1 == \
-                    0.05 else "monostable/" + str(N) + "_monostable_GIL"
-        np.savetxt(namefile + ".txt", p_AB.transpose())
-        np.savetxt(namefile + "_time.txt", p_AB_t.transpose())
-        nA_star, nB_star = np.where(p_AB == np.max(p_AB))
-        low_nA = int(nA_star)-50
-        if low_nA < 0:
-            low_nA = 0
-        high_nA = int(nA_star)+51
-        if high_nA > N:
-            high_nA = N
-        low_nB = int(nB_star)-50
-        if low_nB < 0:
-            low_nB = 0
-        high_nB = int(nB_star)+51
-        if high_nB > N:
-            high_nB = N
-
-        fig = plt.figure(figsize=(8, 6))
-        plt.imshow(p_AB_t.transpose(), origin='lower', interpolation='nearest')
-        plt.colorbar()
-        if K_1 < 0.02:
-            plt.title(u"Monostable with $K_1 = {}$, $K_2 = {}$ and $N = {}$".format(K_1,K_2,N))
-        else:
-            plt.title(u"Bistable with $K_1 = {}$, $K_2 = {}$ and $N = {}$".format(K_1,K_2,N))
-        plt.xlim(low_nA, high_nA)
-        plt.ylim(low_nB, high_nB)
-        plt.xlabel("$n_A$", size=14)
-        plt.ylabel("$n_B$", size=14)
-        plt.tight_layout()
-        plt.savefig(namefile + '.png', dpi=300, facecolor='white', transparent=False)
-        plt.close()
-
-
-# %% codecell
-# %% markdown
-# ### Loop for different $N$ and different $v_2$ values 24/02/2022
-# Here $v_2 = 1.15$ for bistable and 1.05 for monostable
-# We tried to introduce more parameters to be exaclty in the same situation of
-# Fig. 5 of (Bazzani et al., 2012) paper
-# file names are changed with a suffix with underscore:
-# _const for constant rates _b for comparison with a second identical Gillespie, _time for time distribution based on
-# time occupation, _time_vel for distribution including the velocity parameters of chemical reactions
-# %% codecell
-
-t_term = 1000
-t_max = 100000.
-N_min = 5
-N_max = 105
-N_step = 10
-K_1 = 1
-K_2 = 2
-v_2 = v_3 = 1.05
-v_1 = v_4 = 1
-#N = 30
-for (v_2,v_3) in ([1.05, 1.05], [1.15, 1.15]):
-    k_R1 = lambda s: v_1*s.pi_BA(K_1, K_2)
-    k_R2 = lambda s: v_2*s.pi_AB(K_1, K_2)
-    k_R3 = lambda s: v_3*s.pi_CB(K_1, K_2)
-    k_R4 = lambda s: v_4*s.pi_BC(K_1, K_2)
-    kinetics = [k_R1, k_R2, k_R3, k_R4]
-    modific = [mod_R1, mod_R2, mod_R3, mod_R4]
-    for N in np.arange(N_min, N_max+1, N_step):
-        n_A = n_C = rng.integers(0, round(N/2), endpoint=True)
-        n_B = N - n_A - n_C
-        steps = [i for i in run(current, t_max)]
-        A, B, C, delta_t, time = zip(*steps)
-        p_AC_t = np.zeros((N+1, N+1))
-        p_AB_t = np.zeros((N+1, N+1))
-        distributionA = Counter()
-        distribution_times = Counter()
-        for A, B, C, dt, t in ((A, B, C, dt, t) for A, B, C, dt, t in steps if t > t_term):
-            distribution_times[(A, B, C)]+=dt
-        for (A, B, C), val in distribution_times.items():
-            p_AB_t[A, B] = val
-            p_AC_t[A, C] = val
-        p_AB_t = p_AB_t/np.sum(p_AB_t)
-        p_AC_t = p_AC_t/np.sum(p_AC_t)
-        namefile = os.path.join(path, "bistable",  str(N) + "_bistable_GIL") if v_2 == \
-                   1.15 else os.path.join(path, "monostable",  str(N) + "_monostable_GIL")
-        np.savetxt(namefile + "_AB_time_vel.txt", p_AB_t.transpose()) #label AC for p_AC and AB for p_AB
-        np.savetxt(namefile + "_AC_time_vel.txt", p_AC_t.transpose())
-
-
-# %% markdown
-## Is ergodicity verified?
-# Here we check if the ergodic ansatz is correct (we try several simulations with a different initialization)
-# and merge them together for the final distribution
-#
-# Ergodicity does not seem verified, because the system state depends very much on the initial conditions,
-# so it seems necessary to run it for many different initial conditions
-# %%
-
-t_term = 1000
-t_max_steps = 30000.
-N_min = 5
-N_max = 105
-N_step = 10
-K_1 = 1.
-K_2 = 2.
-v_2 = v_3 = 1.15  #put integer value
-v_1 = v_4 = 1.
-n_steps = 100
-#N = 105
-# %%
-for (v_2,v_3) in ([1.05, 1.05], [1.15, 1.15]):
-    k_R1 = lambda s: v_1*s.pi_BA(K_1, K_2)
-    k_R2 = lambda s: v_2*s.pi_AB(K_1, K_2)
-    k_R3 = lambda s: v_3*s.pi_CB(K_1, K_2)
-    k_R4 = lambda s: v_4*s.pi_BC(K_1, K_2)
-    kinetics = [k_R1, k_R2, k_R3, k_R4]
-    modific = [mod_R1, mod_R2, mod_R3, mod_R4]
-    for N in np.arange(N_min, N_max+1, N_step):
-        steps = []
-        for j in np.arange(n_steps):
-            rng = np.random.default_rng()
-            alpha = [1,1,1]
-            #dir_var = N*dirichlet.rvs(alpha, size=1, random_state = rng)  # initializa with Dirichlet distribution
-            #n_A, n_C = np.int_(np.round(dir_var[0,:2]))
-            n_A = n_C = rng.integers(0, round(N/2), endpoint=True)  #initialize with random uniform n_A = n_C
-            n_B = N - n_A - n_C
-            current = State(n_A, n_B, n_C, 0, 0)
-            steps_temp = [i for i in run(current, t_max_steps)]
-            steps.extend((A, B, C, dt, t) for A, B, C, dt, t in steps_temp if t > t_term)
-        A, B, C, delta_t, time = zip(*steps)
-        p_AC_t = np.zeros((N+1, N+1))
-        p_AB_t = np.zeros((N+1, N+1))
-        distributionA = Counter()
-        distribution_times = Counter()
-        for A, B, C, dt, t in ((A, B, C, dt, t) for A, B, C, dt, t in steps):
-            distribution_times[(A, B, C)]+=dt
-        for (A, B, C), val in distribution_times.items():
-            p_AB_t[A, B] = val
-            p_AC_t[A, C] = val
-        p_AB_t = p_AB_t/np.sum(p_AB_t)
-        p_AC_t = p_AC_t/np.sum(p_AC_t)
-        namefile = os.path.join(path, "bistable",  str(N) + "_bistable_GIL_v2_" + str(v_2)) if v_2 >= \
-                   1.1 else os.path.join(path, "monostable",  str(N) + "_monostable_GIL_v2_" + str(v_2))
-        #np.savetxt(namefile + "_AB_time_vel.txt", p_AB_t.transpose()) #label AC for p_AC and AB for p_AB
-        np.savetxt(namefile + "_AC_time_vel.txt", p_AC_t.transpose())
 
 
 # %% markdown
@@ -496,7 +193,7 @@ for (v_2) in (np.linspace(1.5,2.49,100)):
             n_A, n_C = np.int_(np.round(dir_var[0,:2]))
             #n_A = n_C = rng.integers(0, round(N/2), endpoint=True)  #initialize with random uniform n_A = n_C
             n_B = N - n_A - n_C
-            current = State_c(n_A, n_B, n_C, 0, 0)
+            current = State(n_A, n_B, n_C, 0, 0)
             steps_temp = [i for i in run(current, t_max_steps)]
             steps.extend((A, B, C, dt, t) for A, B, C, dt, t in steps_temp if t > t_term)
         A, B, C, delta_t, time = zip(*steps)
