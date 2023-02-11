@@ -18,6 +18,6 @@ We highlight that this repository provides the code used to produce the results 
 
 The repository is simply organized as follows:
 
-- in the 'methods' folder are reported the scripts used to obtain the results with the methods presented in the paper, namely RWA, SSE, exact solution (obtained through the RK4(5) algorithm) and MUL* (standard multinomial solution obtained by linearizing the master equation at the critical point). In addition, we report also the implementation of the Gillespie algorithm. Inline documentation with references to the equations of the paper is included.
+- in the 'methods' folder are reported the scripts used to obtain the results with the methods presented in the paper, namely RWA (Random Walk Approximation), SSE (System Size Expansion), exact solution (obtained through the RK4(5) algorithm) and MUL* (standard multinomial solution obtained by linearizing the master equation at the critical point). In addition, we report also the implementation of the Gillespie algorithm. Inline documentation with references to the equations of the paper is included.
 - in the 'error' folder is reported the script used for the plot of the errors included in the paper.
 
