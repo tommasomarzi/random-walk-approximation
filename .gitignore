@@ -1,0 +1,12 @@
+bistable/**
+monostable/**
+LNA_results/**
+error_computation/**
+methods/*
+
+*.png
+*.zip
+
+interpolation.py
+exact_solution.py
+check_derivative_prob.py
